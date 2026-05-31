@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#00c6a7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>PrevRisk — Panel de Prevención de Riesgos</title>
+    <meta name="description" content="Panel de gestión integral para el área de Prevención de Riesgos. Organiza tareas, documentos, capacitaciones e inspecciones en un solo lugar.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+    <script>
+      // Fallback: si loading screen sigue visible tras 6s, forzar ocultar
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const ls = document.getElementById('loadingScreen');
+          if (ls && getComputedStyle(ls).display !== 'none') {
+            ls.style.opacity = '0';
+            setTimeout(() => { ls.style.display = 'none'; }, 500);
+          }
+        }, 6000);
+      });
+    </script>
+</head>
+<body>
+
+    <!-- ===== LOADING SCREEN ===== -->
+    <div id="loadingScreen" style="position:fixed;inset:0;z-index:10000;background:#060b18;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .5s ease;">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#00c6a7,#00a6df);display:grid;place-items:center;color:#fff;font-size:2rem;box-shadow:0 8px 32px rgba(0,198,167,.45);">
+        <span class="material-icons-round">shield</span>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.2rem;font-weight:900;color:#e2e8f4;letter-spacing:-.3px;">PrevRisk</div>
+        <div style="font-size:.75rem;color:#4a5e7a;margin-top:.25rem;">Cargando sistema...</div>
+      </div>
+      <div style="width:180px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;">
+        <div id="loadBar" style="height:100%;background:linear-gradient(90deg,#00c6a7,#00a6df);border-radius:2px;animation:loadSlide 1.6s ease-in-out infinite;"></div>
+      </div>
+    </div>
+    <style>
+      @keyframes loadSlide{0%{width:0;margin-left:0}50%{width:70%;margin-left:0}100%{width:0;margin-left:100%}}
+    </style>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <span class="material-icons-round">shield</span>
+                </div>
+                <div class="logo-text">
+                    <h1>PrevRisk</h1>
+                    <span>Panel de Gestión</span>
+                </div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="dashboard">
+                <span class="material-icons-round">dashboard</span>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="tareas">
+                <span class="material-icons-round">task_alt</span>
+                <span class="nav-label">Tareas (Kanban)</span>
+            </a>
+            <a href="#" class="nav-item" data-view="personal">
+                <span class="material-icons-round">badge</span>
+                <span class="nav-label">Personal (Fichas)</span>
+            </a>
+            <a href="#" class="nav-item" data-view="calendario">
+                <span class="material-icons-round">calendar_month</span>
+                <span class="nav-label">Calendario</span>
+            </a>
+
+            <div class="nav-section-label">Gestión SST</div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="sistema">
+                    <span class="material-icons-round">account_tree</span>
+                    <span class="nav-label">Sistema de Gestión</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupSistema">
+                    <a href="#" class="nav-sub-item" data-view="sst-politica">Política SST</a>
+                    <a href="#" class="nav-sub-item" data-view="sst-programa">Programa Preventivo</a>
+                    <a href="#" class="nav-sub-item" data-view="sst-carta-gantt">Carta Gantt</a>
+                    <a href="#" class="nav-sub-item" data-view="sst-apr">APR / Encargado PRL</a>
+                    <a href="#" class="nav-sub-item" data-view="sst-delegados">Delegados SST</a>
+                </div>
+            </div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="miper">
+                    <span class="material-icons-round">grid_on</span>
+                    <span class="nav-label">MIPER / Matrices</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupMiper">
+                    <a href="#" class="nav-sub-item" data-view="miper-2026">MIPER 2026</a>
+                    <a href="#" class="nav-sub-item" data-view="miper-procedimiento">Procedimiento MIPER</a>
+                </div>
+            </div>
+
+
+            <div class="nav-section-label">Legal y Normativo</div>
+            <a href="#" class="nav-item" data-view="riohs">
+                <span class="material-icons-round">gavel</span>
+                <span class="nav-label">RIOHS</span>
+            </a>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="leykarin">
+                    <span class="material-icons-round">balance</span>
+                    <span class="nav-label">Ley Karin</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupLeyKarin">
+                    <a href="#" class="nav-sub-item" data-view="karin-protocolo">Protocolo Acoso</a>
+                    <a href="#" class="nav-sub-item" data-view="karin-procedimiento">Proc. Investigación</a>
+                    <a href="#" class="nav-sub-item" data-view="karin-politica">Política Prevención</a>
+                    <a href="#" class="nav-sub-item" data-view="karin-formatos">Formatos e Instructivos</a>
+                </div>
+            </div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="protocolos">
+                    <span class="material-icons-round">medical_services</span>
+                    <span class="nav-label">Protocolos MINSAL</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupProtocolos">
+                    <a href="#" class="nav-sub-item" data-view="proto-hiperbaria">Hiperbaria</a>
+                    <a href="#" class="nav-sub-item" data-view="proto-prexor">PREXOR</a>
+                    <a href="#" class="nav-sub-item" data-view="proto-tmert">TMERT</a>
+                    <a href="#" class="nav-sub-item" data-view="proto-psicosocial">Psicosocial</a>
+                </div>
+            </div>
+
+            <div class="nav-section-label">Accidentes y Casos</div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="accidentes">
+                    <span class="material-icons-round">local_hospital</span>
+                    <span class="nav-label">Accidentes</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupAccidentes">
+                    <a href="#" class="nav-sub-item" data-view="acc-estadisticas">Estadísticas 2026</a>
+                    <a href="#" class="nav-sub-item" data-view="acc-nomina">Nómina Accidentes</a>
+                    <a href="#" class="nav-sub-item" data-view="acc-procedimiento">Proc. ante Accidente</a>
+                    <a href="#" class="nav-sub-item" data-view="acc-caso-gomez">Caso Juan Gómez</a>
+                </div>
+            </div>
+
+            <div class="nav-section-label">Embarcaciones</div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="embarcaciones">
+                    <span class="material-icons-round">directions_boat</span>
+                    <span class="nav-label">Flota</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupEmbarcaciones">
+                    <a href="#" class="nav-sub-item" data-view="emb-maria-jose">María José <span class="nav-badge nav-badge-ok">Activa</span></a>
+                    <a href="#" class="nav-sub-item" data-view="emb-alvarito">Alvarito <span class="nav-badge nav-badge-ok">Activa</span></a>
+                    <a href="#" class="nav-sub-item" data-view="emb-aukan">Aukan <span class="nav-badge nav-badge-ok">Activa</span></a>
+                    <a href="#" class="nav-sub-item" data-view="emb-don-humberto">Don Humberto <span class="nav-badge nav-badge-warn">Parada</span></a>
+                    <a href="#" class="nav-sub-item" data-view="emb-lafquen">Lafquen <span class="nav-badge nav-badge-warn">Parada</span></a>
+                </div>
+            </div>
+
+
+            <div class="nav-section-label">Buceo</div>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="planes">
+                    <span class="material-icons-round">emergency</span>
+                    <span class="nav-label">Planes Contingencia</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupPlanes">
+                    <a href="#" class="nav-sub-item" data-view="plan-melinka">Melinka</a>
+                    <a href="#" class="nav-sub-item" data-view="plan-chacabuco">Chacabuco</a>
+                    <a href="#" class="nav-sub-item" data-view="plan-aguirre">Aguirre</a>
+                    <a href="#" class="nav-sub-item" data-view="plan-cisnes">Puerto Cisnes</a>
+                    <a href="#" class="nav-sub-item" data-view="plan-natales">Natales</a>
+                </div>
+            </div>
+            <a href="#" class="nav-item" data-view="bitacoras">
+                <span class="material-icons-round">scuba_diving</span>
+                <span class="nav-label">Bitácoras Buceo</span>
+            </a>
+
+            <div class="nav-section-label">Documentación</div>
+            <a href="#" class="nav-item" data-view="documentos">
+                <span class="material-icons-round">folder</span>
+                <span class="nav-label">Documentos Generales</span>
+            </a>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="cartas">
+                    <span class="material-icons-round">mail</span>
+                    <span class="nav-label">Cartas Conductoras</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupCartas">
+                    <a href="#" class="nav-sub-item" data-view="cartas-recepcionadas">Recepcionadas</a>
+                    <a href="#" class="nav-sub-item" data-view="cartas-formatos">Formatos</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="pts">
+                    <span class="material-icons-round">engineering</span>
+                    <span class="nav-label">PTS (Procedimientos)</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupPTS">
+                    <a href="#" class="nav-sub-item" data-view="pts-list">Ver Todos</a>
+                    <a href="#" class="nav-sub-item" data-view="pts-banos">PTS Baños</a>
+                    <a href="#" class="nav-sub-item" data-view="pts-tensores">PTS Tensores</a>
+                </div>
+            </div>
+            <a href="#" class="nav-item" data-view="examenes">
+                <span class="material-icons-round">health_and_safety</span>
+                <span class="nav-label">Exámenes Ocup.</span>
+            </a>
+            <a href="#" class="nav-item" data-view="extintores">
+                <span class="material-icons-round">fire_extinguisher</span>
+                <span class="nav-label">Extintores</span>
+            </a>
+            <a href="#" class="nav-item" data-view="epp">
+                <span class="material-icons-round">security</span>
+                <span class="nav-label">Certificaciones EPP</span>
+            </a>
+
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">BP</div>
+                <div class="user-details">
+                    <span class="user-name">Bastian</span>
+                    <span class="user-role">Prev. de Riesgos</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="menu-toggle" id="menuToggle">
+                <span class="material-icons-round">menu</span>
+            </button>
+            <div class="topbar-search">
+                <span class="material-icons-round">search</span>
+                <input type="text" id="globalSearch" placeholder="Buscar tareas, documentos, capacitaciones...">
+                <div id="searchResultsPanel" class="search-results-panel"></div>
+            </div>
+            <div class="topbar-actions">
+                <div id="cloudIndicator" title="Sincronización">
+                    <span class="material-icons-round" id="cloudIcon">cloud_done</span>
+                    <span id="cloudText">Sincronizado</span>
+                </div>
+                <button class="btn-icon" id="btnNotifBell" title="Notificaciones" style="position:relative;">
+                    <span class="material-icons-round">notifications</span>
+                    <span id="notifBadge" style="display:none;position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:#f43f5e;box-shadow:0 0 0 2px #060b18;"></span>
+                </button>
+                <button class="btn-icon" id="btnExportExcel" title="Exportar Reporte Semanal a Excel/CSV">
+                    <span class="material-icons-round" style="color:var(--success)">table_view</span>
+                </button>
+                <button class="btn-icon" id="themeToggle" title="Cambiar tema">
+                    <span class="material-icons-round">dark_mode</span>
+                </button>
+                <button class="btn-primary" id="btnNewItem">
+                    <span class="material-icons-round">add</span>
+                    <span>Nuevo</span>
+                </button>
+            </div>
+
+            <!-- Notification Dropdown -->
+            <div id="notifDropdown">
+                <div class="notif-dd-header">
+                    <span>Alertas del Sistema</span>
+                    <button class="notif-dd-close" onclick="document.getElementById('notifDropdown').style.display='none'">×</button>
+                </div>
+                <div id="notifList"></div>
+            </div>
+        </header>
+
+        <!-- Dashboard View -->
+        <section class="view active" id="view-dashboard">
+            <div class="view-header">
+                <h2>Panel General</h2>
+                <p class="view-subtitle" id="currentDate"></p>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card stat-pending">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">pending_actions</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statPending">0</span>
+                        <span class="stat-label">Pendientes</span>
+                    </div>
+                    <div class="stat-trend trend-warning">
+                        <span class="material-icons-round">schedule</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-progress">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">autorenew</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statProgress">0</span>
+                        <span class="stat-label">En Progreso</span>
+                    </div>
+                    <div class="stat-trend trend-info">
+                        <span class="material-icons-round">trending_up</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-done">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">check_circle</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statDone">0</span>
+                        <span class="stat-label">Completadas</span>
+                    </div>
+                    <div class="stat-trend trend-success">
+                        <span class="material-icons-round">done_all</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-overdue" onclick="showOverdueTasks()" style="cursor:pointer" title="Ver tareas vencidas">
+                    <div class="stat-icon">
+                        <span class="material-icons-round">warning</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statOverdue">0</span>
+                        <span class="stat-label">Vencidas</span>
+                    </div>
+                    <div class="stat-trend trend-danger">
+                        <span class="material-icons-round">priority_high</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Panels -->
+            <!-- KPI Row -->
+            <div class="kpi-row" id="kpiRow" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1rem;"></div>
+
+            <div class="dashboard-grid">
+                <!-- Donut Estado -->
+                <div class="panel panel-chart">
+                    <div class="panel-header">
+                        <h3>Estado General de Tareas</h3>
+                    </div>
+                    <div class="panel-body" style="display:flex;flex-direction:column;align-items:center;position:relative;height:280px;">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tendencia mensual -->
+                <div class="panel panel-chart">
+                    <div class="panel-header">
+                        <h3>Tendencia Mensual</h3>
+                        <span style="font-size:.72rem;color:var(--text-muted)">Últimos 6 meses</span>
+                    </div>
+                    <div class="panel-body" style="height:280px;position:relative;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Cumplimiento por área -->
+                <div class="panel panel-chart">
+                    <div class="panel-header">
+                        <h3>Cumplimiento por Área</h3>
+                    </div>
+                    <div class="panel-body" style="height:280px;position:relative;">
+                        <canvas id="areaChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Índices legales SST -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3>Índices de Accidentabilidad</h3>
+                        <span style="font-size:.7rem;color:var(--text-muted)">Ley 16.744</span>
+                    </div>
+                    <div class="panel-body" id="indicesPanel">
+                        <div id="indicesContent"></div>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown -->
+                <div class="panel panel-categories">
+                    <div class="panel-header">
+                        <h3>Por Categoría</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="category-bars" id="categoryBars"></div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Items -->
+                <div class="panel panel-upcoming">
+                    <div class="panel-header">
+                        <h3>Próximos Vencimientos</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upcoming-list" id="upcomingList"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="panel panel-activity" style="grid-column:1/-1">
+                    <div class="panel-header">
+                        <h3>Actividad Reciente</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="activity-timeline" id="activityTimeline"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Personal View -->
+        <section class="view" id="view-personal">
+            <div class="view-header">
+                <h2>Directorio de Personal</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewPersonal">
+                        <span class="material-icons-round">person_add</span>
+                        <span class="hide-mobile">Nuevo Trabajador</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-grid" style="margin-bottom: 1.5rem;">
+                <div class="stat-card stat-progress">
+                    <div class="stat-icon"><span class="material-icons-round">groups</span></div>
+                    <div>
+                        <span class="stat-value" id="statTotalPersonal">0</span>
+                        <span class="stat-label">Total Activos</span>
+                    </div>
+                </div>
+                <div class="stat-card stat-warning" onclick="showPersonalVencimientos()" style="cursor:pointer" title="Ver documentos por vencer o vencidos">
+                    <div class="stat-icon"><span class="material-icons-round">warning_amber</span></div>
+                    <div>
+                        <span class="stat-value" id="statVencimientosPersonal">0</span>
+                        <span class="stat-label">Docs por Vencer/Vencidos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="personal-grid" id="personalGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1rem;">
+                <!-- Personal cards injected here -->
+            </div>
+        </section>
+
+        <!-- Tareas View -->
+        <section class="view" id="view-tareas">
+            <div class="view-header">
+                <h2>Tareas</h2>
+                <div class="view-actions">
+                    <div class="filter-group">
+                        <button class="filter-btn active" data-filter="all">Todas</button>
+                        <button class="filter-btn" data-filter="pendiente">Pendientes</button>
+                        <button class="filter-btn" data-filter="en_progreso">En Progreso</button>
+                        <button class="filter-btn" data-filter="completada">Completadas</button>
+                    </div>
+                </div>
+            </div>
+            <div class="kanban-board" id="kanbanBoard">
+                <div class="kanban-column" data-status="pendiente">
+                    <div class="kanban-header">
+                        <span class="kanban-dot dot-pending"></span>
+                        <h4>Pendiente</h4>
+                        <span class="kanban-count" id="kanbanPending">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanbanPendingCards"></div>
+                </div>
+                <div class="kanban-column" data-status="en_progreso">
+                    <div class="kanban-header">
+                        <span class="kanban-dot dot-progress"></span>
+                        <h4>En Progreso</h4>
+                        <span class="kanban-count" id="kanbanProgress">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanbanProgressCards"></div>
+                </div>
+                <div class="kanban-column" data-status="completada">
+                    <div class="kanban-header">
+                        <span class="kanban-dot dot-done"></span>
+                        <h4>Completada</h4>
+                        <span class="kanban-count" id="kanbanDone">0</span>
+                    </div>
+                    <div class="kanban-cards" id="kanbanDoneCards"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Capacitaciones View -->
+        <section class="view" id="view-capacitaciones">
+            <div class="view-header">
+                <h2>Capacitaciones</h2>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="capacitacionesTable">
+                    <thead>
+                        <tr>
+                            <th>Tema</th>
+                            <th>Fecha</th>
+                            <th>Asistentes</th>
+                            <th>Estado</th>
+                            <th>Prioridad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capacitacionesBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Documentos View -->
+        <section class="view" id="view-documentos">
+            <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <h2>Documentos</h2>
+                <button class="btn-primary" id="btnSyncLocalFiles" style="background: linear-gradient(135deg, #0984e3, #00cec9); border: none; display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border-radius: 8px; color: #fff; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(0, 206, 201, 0.2);">
+                    <span class="material-icons-round" id="syncIcon">sync</span>
+                    <span id="syncText">Carga Masiva (Google Drive)</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="documentosTable">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Tipo</th>
+                            <th>Fecha Creación</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="documentosBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Inspecciones View -->
+        <section class="view" id="view-inspecciones">
+            <div class="view-header">
+                <h2>Inspecciones</h2>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="inspeccionesTable">
+                    <thead>
+                        <tr>
+                            <th>Inspección</th>
+                            <th>Ubicación</th>
+                            <th>Fecha</th>
+                            <th>Hallazgos</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inspeccionesBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Calendario View -->
+        <section class="view" id="view-calendario">
+            <div class="view-header">
+                <h2>Calendario</h2>
+                <div class="view-actions">
+                    <button class="btn-icon" id="calPrev">
+                        <span class="material-icons-round">chevron_left</span>
+                    </button>
+                    <h3 id="calMonthYear"></h3>
+                    <button class="btn-icon" id="calNext">
+                        <span class="material-icons-round">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+            <div class="calendar-grid">
+                <div class="cal-header">
+                    <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                </div>
+                <div class="cal-body" id="calBody"></div>
+            </div>
+        </section>
+
+        <!-- Bitácoras de Buceo View -->
+        <section class="view" id="view-bitacoras">
+            <div class="view-header">
+                <h2>Bitácoras de Buceo</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewDive">
+                        <span class="material-icons-round">add</span>
+                        <span>Nueva Inmersión</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dive Stats -->
+            <div class="stats-grid dive-stats">
+                <div class="stat-card" style="border-left:3px solid var(--accent)">
+                    <div class="stat-icon" style="background:var(--accent-glow);color:var(--accent-light)">
+                        <span class="material-icons-round">scuba_diving</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="diveTotalCount">0</span>
+                        <span class="stat-label">Total Inmersiones</span>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-left:3px solid var(--info)">
+                    <div class="stat-icon" style="background:rgba(116,185,255,.12);color:var(--info)">
+                        <span class="material-icons-round">straighten</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="diveMaxDepth">0m</span>
+                        <span class="stat-label">Prof. Máxima</span>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-left:3px solid var(--success)">
+                    <div class="stat-icon" style="background:rgba(0,206,201,.12);color:var(--success)">
+                        <span class="material-icons-round">timer</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="diveTotalTime">0h</span>
+                        <span class="stat-label">Tiempo Total</span>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-left:3px solid var(--warning)">
+                    <div class="stat-icon" style="background:rgba(253,203,110,.12);color:var(--warning)">
+                        <span class="material-icons-round">person</span>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="diveBuzosCount">0</span>
+                        <span class="stat-label">Buzos Registrados</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtro de Zonas para Bitácoras -->
+            <div class="view-actions" style="margin-bottom: 1rem; justify-content: flex-start;">
+                <div class="filter-group" id="diveZoneFilterGroup">
+                    <button class="filter-btn active" data-zone="all" id="btnZoneAll">Todas las Zonas</button>
+                    <button class="filter-btn" data-zone="aysen" id="btnZoneAysen">Zona Aysén</button>
+                    <button class="filter-btn" data-zone="natales" id="btnZoneNatales">Zona Natales</button>
+                </div>
+            </div>
+
+            <!-- Dive Log Table -->
+            <div class="table-container">
+                <table class="data-table" id="diveTable">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Fecha</th>
+                            <th>Buzo</th>
+                            <th>Zona</th>
+                            <th>Lugar</th>
+                            <th>Prof. Máx</th>
+                            <th>T. Fondo</th>
+                            <th>Tipo</th>
+                            <th>Desco.</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="diveTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Generic Detail View (reused for protocols, plans, PTS, vessels) -->
+        <section class="view" id="view-detail">
+            <div class="view-header">
+                <div>
+                    <h2 id="detailTitle">—</h2>
+                    <p class="view-subtitle" id="detailSubtitle"></p>
+                </div>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnUploadFile">
+                        <span class="material-icons-round">upload_file</span>
+                        <span>Cargar Archivo</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Cards -->
+            <div class="stats-grid" id="detailStats"></div>
+
+            <!-- Checklist (for protocols) -->
+            <details class="panel collapsible-panel" id="detailChecklistPanel" style="margin-bottom:1rem;display:none">
+                <summary class="panel-header" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                    <h3 style="display:flex;align-items:center;margin:0"><span class="material-icons-round" style="margin-right:.4rem;font-size:1.1rem">checklist</span>Checklist de Cumplimiento</h3>
+                    <div style="display:flex;align-items:center;gap:1rem">
+                        <span id="detailChecklistProgress" class="view-subtitle"></span>
+                        <span class="material-icons-round expand-icon" style="color:var(--text-muted)">expand_more</span>
+                    </div>
+                </summary>
+                <div class="panel-body" id="detailChecklist" style="border-top:1px solid var(--border)"></div>
+            </details>
+
+            <!-- Occupational Exams Excel Panel (Only visible for 'examenes') -->
+            <div class="panel" id="detailExamenesExcelPanel" style="margin-bottom:1rem;display:none">
+                <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+                    <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;font-size:1.1rem">health_and_safety</span>Vigencia de Exámenes Ocupacionales (Personal)</h3>
+                    <span id="detailExamenesCount" class="view-subtitle" style="font-weight:600;color:var(--text-secondary)"></span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Cargo</th>
+                                <th>Vigencia Ocupacional</th>
+                                <th>Vigencia Alta Mar</th>
+                                <th>Estado</th>
+                                <th>Documento</th>
+                                <th>Notas</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailExamenesBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted)">Cargando datos de exámenes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Documents Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;font-size:1.1rem">folder_open</span>Documentos Cargados</h3>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Tipo</th>
+                                <th>Tamaño</th>
+                                <th>Fecha Carga</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailFilesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="panel" style="margin-top:1rem">
+                <div class="panel-header">
+                    <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;font-size:1.1rem">sticky_note_2</span>Notas y Observaciones</h3>
+                </div>
+                <div class="panel-body">
+                    <textarea id="detailNotes" rows="3" placeholder="Agregar notas sobre este elemento..." style="width:100%"></textarea>
+                    <button class="btn-primary" id="btnSaveNotes" style="margin-top:.5rem">
+                        <span class="material-icons-round">save</span> Guardar Notas
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== VISTA ACCIDENTES ===== -->
+        <section class="view" id="view-acc-estadisticas">
+            <div class="view-header">
+                <h2>Accidentes y Casos</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewAccidente">
+                        <span class="material-icons-round">add</span>
+                        <span>Nuevo Registro</span>
+                    </button>
+                </div>
+            </div>
+            <div class="stats-grid" style="margin-bottom:1.5rem">
+                <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">local_hospital</span></div><div><span class="stat-value" id="statAccTotal">0</span><span class="stat-label">Total Accidentes</span></div></div>
+                <div class="stat-card stat-pending"><div class="stat-icon"><span class="material-icons-round">pending_actions</span></div><div><span class="stat-value" id="statAccAbiertos">0</span><span class="stat-label">Abiertos</span></div></div>
+                <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">manage_search</span></div><div><span class="stat-value" id="statAccInvestigacion">0</span><span class="stat-label">En Investigación</span></div></div>
+                <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">task_alt</span></div><div><span class="stat-value" id="statAccCerrados">0</span><span class="stat-label">Cerrados</span></div></div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Trabajador</th><th>Fecha</th><th>Tipo</th><th>Gravedad</th><th>Área</th><th>Días Reposo</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="accidentesBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== VISTA EXTINTORES ===== -->
+        <section class="view" id="view-extintores">
+            <div class="view-header">
+                <h2>Control de Extintores</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewExtintor">
+                        <span class="material-icons-round">add</span>
+                        <span>Nuevo Extintor</span>
+                    </button>
+                </div>
+            </div>
+            <div class="stats-grid" style="margin-bottom:1.5rem">
+                <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">fire_extinguisher</span></div><div><span class="stat-value" id="statExtTotal">0</span><span class="stat-label">Total Extintores</span></div></div>
+                <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">check_circle</span></div><div><span class="stat-value" id="statExtOperativos">0</span><span class="stat-label">Operativos</span></div></div>
+                <div class="stat-card stat-pending"><div class="stat-icon"><span class="material-icons-round">warning</span></div><div><span class="stat-value" id="statExtPorRecargar">0</span><span class="stat-label">Por Recargar</span></div></div>
+                <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">block</span></div><div><span class="stat-value" id="statExtBaja">0</span><span class="stat-label">Dados de Baja</span></div></div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Código</th><th>Tipo</th><th>Capacidad</th><th>Ubicación</th><th>Embarcación</th><th>Próx. Recarga</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="extinctoresBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== VISTA EPP ===== -->
+        <section class="view" id="view-epp">
+            <div class="view-header">
+                <h2>Certificaciones EPP</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewEPP">
+                        <span class="material-icons-round">add</span>
+                        <span>Nuevo EPP</span>
+                    </button>
+                </div>
+            </div>
+            <div class="stats-grid" style="margin-bottom:1.5rem">
+                <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">security</span></div><div><span class="stat-value" id="statEppTotal">0</span><span class="stat-label">Total EPP</span></div></div>
+                <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">verified</span></div><div><span class="stat-value" id="statEppVigentes">0</span><span class="stat-label">Vigentes</span></div></div>
+                <div class="stat-card stat-pending"><div class="stat-icon"><span class="material-icons-round">schedule</span></div><div><span class="stat-value" id="statEppPorVencer">0</span><span class="stat-label">Por Vencer</span></div></div>
+                <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">cancel</span></div><div><span class="stat-value" id="statEppVencidos">0</span><span class="stat-label">Vencidos</span></div></div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th>Trabajador</th><th>Tipo EPP</th><th>Marca</th><th>N° Cert.</th><th>Área</th><th>Vencimiento</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="eppBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+
+        <!-- ===== VISTA CARTA GANTT ===== -->
+        <section class="view" id="view-sst-carta-gantt">
+            <div class="view-header">
+                <h2>Carta Gantt — Programa Preventivo 2026</h2>
+                <div class="view-actions">
+                    <button class="btn-primary" id="btnNewGantt">
+                        <span class="material-icons-round">add</span>
+                        <span>Nueva Actividad</span>
+                    </button>
+                    <button class="btn-secondary" id="btnExportGantt" style="display:flex;align-items:center;gap:.4rem">
+                        <span class="material-icons-round" style="font-size:1rem">download</span>
+                        Exportar
+                    </button>
+                </div>
+            </div>
+            <div class="panel" style="margin-bottom:1rem;overflow:hidden;">
+                <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+                    <h3>Programa Anual de Prevención</h3>
+                    <div style="display:flex;gap:.4rem;flex-wrap:wrap" id="ganttLegend"></div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <div id="ganttChart" style="min-width:900px;padding:1rem;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== MODAL GANTT ===== -->
+        <div class="modal-overlay" id="ganttModalOverlay">
+            <div class="modal" id="ganttModal">
+                <div class="modal-header">
+                    <h3 id="ganttModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem">event</span>Actividad Gantt</h3>
+                    <button class="btn-icon modal-close" id="ganttModalClose"><span class="material-icons-round">close</span></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ganttForm">
+                        <input type="hidden" id="ganttId">
+                        <div class="form-group"><label>Actividad / Tarea</label><input type="text" id="ganttNombre" placeholder="Ej: Capacitación Hantavirus" required></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Responsable</label><input type="text" id="ganttResponsable" placeholder="Nombre"></div>
+                            <div class="form-group"><label>Categoría</label>
+                                <select id="ganttCategoria">
+                                    <option value="capacitacion">Capacitación</option>
+                                    <option value="inspeccion">Inspección</option>
+                                    <option value="documento">Documento</option>
+                                    <option value="auditoria">Auditoría</option>
+                                    <option value="simulacro">Simulacro</option>
+                                    <option value="reunion">Reunión SST</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Fecha Inicio</label><input type="date" id="ganttInicio" required></div>
+                            <div class="form-group"><label>Fecha Término</label><input type="date" id="ganttTermino" required></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Estado</label>
+                                <select id="ganttEstado">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="en_progreso">En Progreso</option>
+                                    <option value="completada">Completada</option>
+                                    <option value="atrasada">Atrasada</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>% Avance</label><input type="number" id="ganttAvance" min="0" max="100" value="0" placeholder="0-100"></div>
+                        </div>
+                        <div class="form-group"><label>Observaciones</label><textarea id="ganttObs" rows="2" placeholder="Notas..."></textarea></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="ganttBtnCancel">Cancelar</button>
+                    <button type="button" class="btn-danger" id="ganttBtnDelete" style="display:none">Eliminar</button>
+                    <button type="button" class="btn-primary" id="ganttBtnSave">Guardar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== VISTA EMBARCACIONES (shared) ===== -->
+        <section class="view" id="view-emb-detail">
+            <div class="view-header">
+                <h2 id="embDetailTitle">Embarcación</h2>
+                <div class="view-actions">
+                    <span id="embDetailBadge" class="nav-badge" style="font-size:.8rem;padding:.3rem .7rem"></span>
+                    <button class="btn-secondary" id="btnEditarEmb" style="display:flex;align-items:center;gap:.4rem;font-size:.82rem">
+                        <span class="material-icons-round" style="font-size:1rem">edit</span> Editar
+                    </button>
+                    <button class="btn-secondary" id="btnCambioEstadoEmb" style="display:flex;align-items:center;gap:.4rem;font-size:.82rem"></button>
+                    <button class="btn-secondary" id="btnUploadFileEmb" style="display:flex;align-items:center;gap:.4rem;font-size:.82rem">
+                        <span class="material-icons-round" style="font-size:1rem">upload_file</span>
+                        Cargar Archivo
+                    </button>
+                </div>
+            </div>
+            <div class="stats-grid" id="embDetailStats" style="margin-bottom:1rem;"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem" id="embDetailGrid">
+                <!-- Info + docs -->
+            </div>
+            <!-- Documentos de la embarcación -->
+            <div class="panel" style="margin-bottom:1rem">
+                <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between">
+                    <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.3rem;font-size:1rem">folder_open</span>Documentos Cargados</h3>
+                    <span id="embDocCount" style="font-size:.75rem;color:var(--text-muted)"></span>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead><tr>
+                            <th>Archivo / Documento</th>
+                            <th>Tipo</th>
+                            <th>Fecha Carga</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr></thead>
+                        <tbody id="embDocBody">
+                            <tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-muted)">Sin documentos cargados. Usa "Cargar Archivo" para agregar.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><h3>📋 Checklist de Certificaciones</h3></div>
+                <div class="panel-body" id="embDetailChecklist"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- File Upload Modal -->
+    <div class="modal-overlay" id="fileModalOverlay">
+        <div class="modal" id="fileModal">
+            <div class="modal-header" style="background:linear-gradient(135deg,rgba(116,185,255,.15),rgba(108,92,231,.1))">
+                <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem">cloud_upload</span>Cargar Archivo</h3>
+                <button class="btn-icon modal-close" id="fileModalClose">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Pestañas para Tipo de Carga -->
+                <div class="upload-tabs" style="display:flex;margin-bottom:1rem;gap:.25rem;border-bottom:1px solid var(--border);padding-bottom:.5rem">
+                    <button type="button" class="tab-btn active" id="btnTabLocal" style="background:none;border:none;color:var(--text);font-weight:600;padding:.5rem 1rem;cursor:pointer;border-bottom:2px solid var(--accent);outline:none;font-family:inherit">Archivo Local</button>
+                    <button type="button" class="tab-btn" id="btnTabDrive" style="background:none;border:none;color:var(--text-muted);font-weight:600;padding:.5rem 1rem;cursor:pointer;outline:none;font-family:inherit">Google Drive / Enlace</button>
+                </div>
+
+                <!-- Contenedor 1: Archivo Local -->
+                <div id="localUploadContainer">
+                    <div class="form-group">
+                        <label>Seleccionar Archivo</label>
+                        <div class="file-dropzone" id="fileDropzone">
+                            <span class="material-icons-round" style="font-size:2.5rem;color:var(--accent-light)">cloud_upload</span>
+                            <p style="margin:.5rem 0;font-weight:600">Arrastra archivos aquí o haz click</p>
+                            <p style="font-size:.75rem;color:var(--text-muted)">PDF, Word, Excel, imágenes, videos — sin límite de tamaño</p>
+                            <input type="file" id="fileInput" style="display:none" multiple>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor 2: Google Drive (Oculto al inicio) -->
+                <div id="driveUploadContainer" style="display:none">
+                    <div class="form-group">
+                        <label for="fileDriveUrl">Enlace de Google Drive / Nube</label>
+                        <input type="url" id="fileDriveUrl" placeholder="https://drive.google.com/file/d/...">
+                    </div>
+                    <div class="form-group" style="margin-top:1rem">
+                        <label for="fileDriveName">Nombre del Documento / Título</label>
+                        <input type="text" id="fileDriveName" placeholder="Ej: Plan de Contingencia Puerto Cisnes - Firmado">
+                    </div>
+                </div>
+
+                <!-- Metadatos comunes (Vencimiento, etc.) -->
+                <div class="form-row" style="margin-top:1rem">
+                    <div class="form-group">
+                        <label for="fileVencimiento">Fecha de Vencimiento (opcional)</label>
+                        <input type="date" id="fileVencimiento">
+                    </div>
+                    <div class="form-group" id="groupLocalDesc">
+                        <label for="fileDescripcion">Descripción</label>
+                        <input type="text" id="fileDescripcion" placeholder="Ej: Resolución aprobatoria">
+                    </div>
+                </div>
+                <div id="filePreviewList" style="margin-top:.5rem"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="fileBtnCancel">Cancelar</button>
+                <button type="button" class="btn-primary" id="fileBtnUpload" disabled>
+                    <span class="material-icons-round">upload</span> Subir Archivos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dive Modal -->
+    <div class="modal-overlay" id="diveModalOverlay">
+        <div class="modal modal-wide" id="diveModal">
+            <div class="modal-header" style="background:linear-gradient(135deg,rgba(108,92,231,.15),rgba(0,206,201,.1))">
+                <h3 id="diveModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem">scuba_diving</span>Nueva Inmersión</h3>
+                <button class="btn-icon modal-close" id="diveModalClose">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="diveForm">
+                    <input type="hidden" id="diveId">
+
+                    <div class="form-section-title">Datos de la Inmersión</div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveFecha">Fecha</label>
+                            <input type="date" id="diveFecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveHoraInicio">Hora Inicio</label>
+                            <input type="time" id="diveHoraInicio">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveHoraFin">Hora Fin</label>
+                            <input type="time" id="diveHoraFin">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="diveBuzo">Nombre del Buzo</label>
+                            <input type="text" id="diveBuzo" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveSupervisor">Supervisor de Buceo</label>
+                            <input type="text" id="diveSupervisor" placeholder="Nombre del supervisor">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveMatricula">Matrícula Buzo</label>
+                            <input type="text" id="diveMatricula" placeholder="Ej: 12345-D">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveMatriculaEstado">Estado Matrícula</label>
+                            <select id="diveMatriculaEstado">
+                                <option value="vigente">Vigente</option>
+                                <option value="por_vencer">Por Vencer</option>
+                                <option value="vencida">Vencida</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveMatriculaVenc">Vencimiento Matrícula</label>
+                            <input type="date" id="diveMatriculaVenc">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveZona">Zona</label>
+                            <select id="diveZona">
+                                <option value="aysen">Zona Aysén</option>
+                                <option value="natales">Zona Natales</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveLugar">Lugar / Sitio</label>
+                            <input type="text" id="diveLugar" placeholder="Ej: Puerto Montt, Muelle Norte" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveTipo">Tipo de Buceo</label>
+                            <select id="diveTipo">
+                                <option value="comercial">Comercial</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="cientifico">Científico</option>
+                                <option value="rescate">Rescate</option>
+                                <option value="inspeccion">Inspección Submarina</option>
+                                <option value="mantenimiento">Mantenimiento</option>
+                                <option value="recreativo">Recreativo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Parámetros de Inmersión</div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveProfMax">Profundidad Máx (m)</label>
+                            <input type="number" id="diveProfMax" placeholder="0" min="0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveTiempoFondo">Tiempo de Fondo (min)</label>
+                            <input type="number" id="diveTiempoFondo" placeholder="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveTempAgua">Temp. Agua (°C)</label>
+                            <input type="number" id="diveTempAgua" placeholder="0" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="divePresionInicio">Presión Inicio (bar)</label>
+                            <input type="number" id="divePresionInicio" placeholder="200" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="divePresionFin">Presión Fin (bar)</label>
+                            <input type="number" id="divePresionFin" placeholder="50" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveMezcla">Mezcla Respiratoria</label>
+                            <select id="diveMezcla">
+                                <option value="aire">Aire Comprimido</option>
+                                <option value="nitrox">Nitrox (EANx)</option>
+                                <option value="trimix">Trimix</option>
+                                <option value="heliox">Heliox</option>
+                                <option value="oxigeno">Oxígeno Puro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Descompresión y Seguridad</div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveDescompresion">Descompresión</label>
+                            <select id="diveDescompresion">
+                                <option value="no">Sin Descompresión</option>
+                                <option value="si">Con Paradas Desco.</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveTabla">Tabla Utilizada</label>
+                            <select id="diveTabla">
+                                <option value="na">N/A</option>
+                                <option value="us_navy">US Navy</option>
+                                <option value="dciem">DCIEM</option>
+                                <option value="buhlmann">Bühlmann</option>
+                                <option value="rgbm">RGBM</option>
+                                <option value="otra">Otra</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveParadaSeguridad">Parada Seguridad</label>
+                            <select id="diveParadaSeguridad">
+                                <option value="si">Sí (3-5m / 3min)</option>
+                                <option value="no">No Realizada</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Estado del Buzo</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="diveSaludPre">Condición Pre-Inmersión</label>
+                            <select id="diveSaludPre">
+                                <option value="apto">Apto - Sin observaciones</option>
+                                <option value="observacion">Apto con Observación</option>
+                                <option value="no_apto">No Apto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveSaludPost">Condición Post-Inmersión</label>
+                            <select id="diveSaludPost">
+                                <option value="normal">Normal - Sin síntomas</option>
+                                <option value="fatiga">Fatiga Leve</option>
+                                <option value="sintomas">Síntomas Reportados</option>
+                                <option value="emergencia">Emergencia Médica</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Biometría / Descanso</div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveDescansoPost">Descanso Post-Inmersión</label>
+                            <input type="text" id="diveDescansoPost" placeholder="Ej: 2h 30m">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveDescansoReq">Descanso Requerido</label>
+                            <input type="text" id="diveDescansoReq" placeholder="Ej: 4h">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveRitmoCardiaco">Ritmo Cardíaco (BPM)</label>
+                            <input type="number" id="diveRitmoCardiaco" placeholder="Ej: 78" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">Logística / Dotación</div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label for="diveDotacion">Dotación de Seguridad</label>
+                            <select id="diveDotacion">
+                                <option value="completa">Completa</option>
+                                <option value="parcial">Parcial</option>
+                                <option value="incompleta">Incompleta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="diveDotacionDetalle">Detalle Dotación</label>
+                            <input type="text" id="diveDotacionDetalle" placeholder="Ej: 3/3 elementos">
+                        </div>
+                        <div class="form-group">
+                            <label for="diveChecklistEquipo">Checklist Equipo</label>
+                            <select id="diveChecklistEquipo">
+                                <option value="ok">OK - Verificado</option>
+                                <option value="observaciones">Con Observaciones</option>
+                                <option value="no_realizado">No Realizado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="diveEquipo">Equipo Utilizado</label>
+                        <textarea id="diveEquipo" rows="2" placeholder="Ej: Traje seco 7mm, BCD, regulador principal + octopus, computador de buceo, cuchillo, linterna..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="diveObservaciones">Observaciones / Trabajo Realizado</label>
+                        <textarea id="diveObservaciones" rows="3" placeholder="Descripción del trabajo realizado, condiciones del fondo, visibilidad, corrientes, incidentes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="diveBtnCancel">Cancelar</button>
+                <button type="button" class="btn-danger" id="diveBtnDelete" style="display:none;">Eliminar</button>
+                <button type="button" class="btn-primary" id="diveBtnSave">Guardar Bitácora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Modal -->
+    <div class="modal-overlay" id="alertsModalOverlay">
+        <div class="modal" id="alertsModal">
+            <div class="modal-header" style="background:linear-gradient(135deg, var(--danger), #ff4757);color:white;border-bottom:none">
+                <h3 style="display:flex;align-items:center;margin:0"><span class="material-icons-round" style="margin-right:.5rem">notifications_active</span>Resumen del Día</h3>
+                <button class="btn-icon" id="alertsModalClose" style="color:white;background:rgba(255,255,255,.2)">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:1.5rem;font-size:.9rem;color:var(--text-secondary)">Estas son las alertas y vencimientos importantes que requieren tu atención:</p>
+                <div id="alertsContainer" style="display:flex;flex-direction:column;gap:.8rem;">
+                    <!-- Alerts will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" id="alertsBtnOk" style="width:100%;justify-content:center">Empezar el día</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personal Modal -->
+    <div class="modal-overlay" id="personalModalOverlay">
+        <div class="modal" id="personalModal">
+            <div class="modal-header">
+                <h3 id="personalModalTitle">Ficha de Trabajador</h3>
+                <button class="btn-icon modal-close" id="personalModalClose">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="personalForm">
+                    <input type="hidden" id="personalId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="personalNombre">Nombre Completo</label>
+                            <input type="text" id="personalNombre" placeholder="Ej. Juan Pérez" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="personalRut">RUT</label>
+                            <input type="text" id="personalRut" placeholder="Ej. 12.345.678-9" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personalRol">Cargo / Rol</label>
+                        <select id="personalRol" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="Buzo Comercial">Buzo Comercial</option>
+                            <option value="Buzo Especialista">Buzo Especialista</option>
+                            <option value="Supervisor de Buceo">Supervisor de Buceo</option>
+                            <option value="Prevencionista">Prevencionista</option>
+                            <option value="Asistente de Superficie">Asistente de Superficie</option>
+                            <option value="Patrón de Nave">Patrón de Nave</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="personalVencExamen">Vencimiento Examen Médico</label>
+                            <input type="date" id="personalVencExamen">
+                        </div>
+                        <div class="form-group">
+                            <label for="personalVencMatricula">Vencimiento Matrícula Armada</label>
+                            <input type="date" id="personalVencMatricula">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="personalNotas">Observaciones</label>
+                        <textarea id="personalNotas" rows="3" placeholder="Restricciones médicas, tallas de EPP, etc."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="personalBtnCancel">Cancelar</button>
+                <button type="button" class="btn-danger" id="personalBtnDelete" style="display:none;">Eliminar</button>
+                <button type="button" class="btn-primary" id="personalBtnSave">Guardar Ficha</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Elemento</h3>
+                <div style="display:flex; gap:.5rem">
+                    <button class="btn-icon" id="btnModalPrint" style="display:none;color:var(--text-secondary)" title="Exportar a PDF / Imprimir">
+                        <span class="material-icons-round">print</span>
+                    </button>
+                    <button class="btn-icon modal-close" id="modalClose">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="itemForm">
+                    <input type="hidden" id="itemId">
+                    
+                    <div class="form-group">
+                        <label for="itemCategory">Categoría</label>
+                        <select id="itemCategory" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="tarea">Tarea General</option>
+                            <option value="capacitacion">Capacitación</option>
+                            <option value="documento">Documento</option>
+                            <option value="inspeccion">Inspección</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemTitle">Título</label>
+                        <input type="text" id="itemTitle" placeholder="Ej: Capacitación Hantavirus" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemDescription">Descripción</label>
+                        <textarea id="itemDescription" rows="3" placeholder="Describe los detalles..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemPriority">Prioridad</label>
+                            <select id="itemPriority" required>
+                                <option value="baja">Baja</option>
+                                <option value="media" selected>Media</option>
+                                <option value="alta">Alta</option>
+                                <option value="critica">Crítica</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="itemStatus">Estado</label>
+                            <select id="itemStatus" required>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="en_progreso">En Progreso</option>
+                                <option value="completada">Completada</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemDueDate">Fecha Vencimiento</label>
+                            <input type="date" id="itemDueDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="itemAssignee">Responsable</label>
+                            <input type="text" id="itemAssignee" placeholder="Nombre...">
+                        </div>
+                    </div>
+
+                    <!-- Capacitacion-specific fields -->
+                    <div class="form-group conditional-field" id="fieldAsistentes" style="display:none;">
+                        <label for="itemAsistentes">N° Asistentes</label>
+                        <input type="number" id="itemAsistentes" placeholder="0" min="0">
+                    </div>
+
+                    <!-- Documento-specific fields -->
+                    <div class="form-group conditional-field" id="fieldDocType" style="display:none;">
+                        <label for="itemDocType">Tipo de Documento</label>
+                        <select id="itemDocType">
+                            <option value="matriz">Matriz de Riesgo</option>
+                            <option value="procedimiento">Procedimiento (PTS)</option>
+                            <option value="acta">Acta de Capacitación</option>
+                            <option value="informe">Informe</option>
+                            <option value="checklist">Checklist</option>
+                            <option value="odi_irl">ODI / IRL</option>
+                            <option value="plan_emergencia">Plan de Emergencia</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <!-- Inspeccion-specific fields -->
+                    <div class="form-group conditional-field" id="fieldUbicacion" style="display:none;">
+                        <label for="itemUbicacion">Ubicación</label>
+                        <input type="text" id="itemUbicacion" placeholder="Lugar de inspección...">
+                    </div>
+                    <div class="form-group conditional-field" id="fieldHallazgos" style="display:none;">
+                        <label for="itemHallazgos">N° Hallazgos</label>
+                        <input type="number" id="itemHallazgos" placeholder="0" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemNotes">Notas adicionales</label>
+                        <textarea id="itemNotes" rows="2" placeholder="Observaciones, links, referencias..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="btnCancel">Cancelar</button>
+                <button type="button" class="btn-danger" id="btnDelete" style="display:none;">Eliminar</button>
+                <button type="button" class="btn-primary" id="btnSave">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal (vencimientos, tareas vencidas) -->
+    <div class="modal-overlay" id="infoModalOverlay">
+        <div class="modal" id="infoModal" style="max-width:580px">
+            <div class="modal-header">
+                <h3 id="infoModalTitle">Información</h3>
+                <button class="btn-icon" id="infoModalClose"><span class="material-icons-round">close</span></button>
+            </div>
+            <div class="modal-body" id="infoModalBody" style="max-height:70vh;overflow-y:auto"></div>
+        </div>
+    </div>
+
+    <!-- Dive Report Modal (Bitácora Digital Premium) -->
+    <div class="modal-overlay" id="diveReportModalOverlay">
+        <div class="modal modal-wide" id="diveReportModal" style="max-width: 800px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.4); background: var(--panel-bg); overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, rgba(9, 132, 227, 0.15), rgba(108, 92, 231, 0.1)); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 1.2rem 1.5rem;">
+                <h3 style="display: flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                    <span class="material-icons-round" style="color: var(--accent); font-size: 1.6rem;">article</span>
+                    Bitácora Digital de Buceo
+                </h3>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button class="btn-primary" id="btnZonePrint" onclick="window.print()" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; padding: 0.5rem 0.85rem; font-weight: 600;">
+                        <span class="material-icons-round" style="font-size: 1.1rem;">print</span> Imprimir / PDF
+                    </button>
+                    <button class="btn-icon modal-close" id="diveReportModalClose" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: all 0.2s;">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body" id="diveReportContent" style="padding: 2rem; overflow-y: auto; max-height: calc(100vh - 200px); color: var(--text);">
+                <!-- Dynamic premium report goes here -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ===== LOGIN MODAL ===== -->
+    <div class="modal-overlay active" id="loginOverlay" style="z-index:9999;">
+      <div class="modal" style="max-width:420px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,rgba(0,198,167,.13),rgba(59,130,246,.09));border-bottom:1px solid var(--border);padding:2.2rem 2rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;">
+          <div style="width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,#00c6a7,#00a6df);display:grid;place-items:center;color:#fff;font-size:1.8rem;box-shadow:0 8px 28px rgba(0,198,167,.5);">
+            <span class="material-icons-round">shield</span>
+          </div>
+          <div style="text-align:center;">
+            <h2 style="font-size:1.45rem;font-weight:900;letter-spacing:-.5px;">PrevRisk</h2>
+            <p style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">Sistema de Gestión de Prevención de Riesgos</p>
+          </div>
+        </div>
+        <div style="padding:1.75rem 2rem 2rem;">
+          <div id="loginError" style="display:none;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:10px;padding:.75rem 1rem;font-size:.82rem;color:var(--danger);margin-bottom:1.1rem;align-items:center;gap:.5rem;">
+            <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;">error</span>
+            <span id="loginErrorText">Usuario o contraseña incorrectos.</span>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Usuario</label>
+            <div style="position:relative;">
+              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">person</span>
+              <input type="text" id="loginUser" placeholder="Ingresa tu usuario" autocomplete="username" style="padding-left:2.8rem;">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Contraseña</label>
+            <div style="position:relative;">
+              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">lock</span>
+              <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()" style="padding-left:2.8rem;padding-right:2.8rem;">
+              <button type="button" id="btnTogglePass" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;">
+                <span class="material-icons-round" style="font-size:1.1rem;">visibility</span>
+              </button>
+            </div>
+          </div>
+          <button class="btn-primary" id="btnLogin" onclick="doLogin()" style="width:100%;justify-content:center;padding:.85rem 1.5rem;font-size:.95rem;border-radius:10px;">
+            <span class="material-icons-round">login</span>
+            Ingresar al Sistema
+          </button>
+          <p style="text-align:center;font-size:.7rem;color:var(--text-muted);margin-top:1.2rem;">
+            <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;">lock</span>
+            Acceso restringido — Solo personal autorizado
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL ACCIDENTE ===== -->
+    <div class="modal-overlay" id="accidenteModalOverlay">
+      <div class="modal modal-wide" id="accidenteModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(240,91,122,.12),rgba(245,166,35,.08));">
+          <h3 id="accidenteModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--danger)">local_hospital</span>Registro de Accidente</h3>
+          <button class="btn-icon modal-close" id="accidenteModalClose"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <form id="accidenteForm">
+            <input type="hidden" id="accidenteId">
+            <div class="form-section-title">Datos del Trabajador</div>
+            <div class="form-row"><div class="form-group"><label>Nombre Completo</label><input type="text" id="accNombre" placeholder="Nombre del accidentado" required></div><div class="form-group"><label>RUT</label><input type="text" id="accRut" placeholder="12.345.678-9"></div></div>
+            <div class="form-row"><div class="form-group"><label>Cargo</label><input type="text" id="accCargo" placeholder="Cargo del trabajador"></div><div class="form-group"><label>Embarcación / Área</label><input type="text" id="accArea" placeholder="Área donde ocurrió"></div></div>
+            <div class="form-section-title">Datos del Accidente</div>
+            <div class="form-row"><div class="form-group"><label>Fecha</label><input type="date" id="accFecha" required></div><div class="form-group"><label>Hora</label><input type="time" id="accHora"></div></div>
+            <div class="form-row">
+              <div class="form-group"><label>Tipo</label><select id="accTipo"><option value="accidente_trabajo">Accidente del Trabajo</option><option value="accidente_trayecto">Accidente de Trayecto</option><option value="enfermedad_profesional">Enfermedad Profesional</option><option value="casi_accidente">Casi Accidente</option><option value="incidente">Incidente sin Lesión</option></select></div>
+              <div class="form-group"><label>Gravedad</label><select id="accGravedad"><option value="leve">Leve</option><option value="moderado">Moderado</option><option value="grave">Grave</option><option value="fatal">Fatal</option></select></div>
+            </div>
+            <div class="form-group"><label>Descripción del Accidente</label><textarea id="accDescripcion" rows="3" placeholder="Describe detalladamente cómo ocurrió..."></textarea></div>
+            <div class="form-section-title">Lesión y Atención Médica</div>
+            <div class="form-row"><div class="form-group"><label>Parte del Cuerpo Afectada</label><input type="text" id="accLesion" placeholder="Ej: Mano derecha"></div><div class="form-group"><label>Días de Reposo</label><input type="number" id="accReposo" placeholder="0" min="0"></div></div>
+            <div class="form-row"><div class="form-group"><label>Mutual / Centro Médico</label><input type="text" id="accMutual" placeholder="Ej: ACHS, IST"></div><div class="form-group"><label>N° Denuncia DIAT/DIEP</label><input type="text" id="accDenuncia" placeholder="Número de folio"></div></div>
+            <div class="form-section-title">Investigación</div>
+            <div class="form-group"><label>Causa Inmediata</label><textarea id="accCausaInmediata" rows="2" placeholder="Acto o condición subestándar directa..."></textarea></div>
+            <div class="form-group"><label>Causa Básica</label><textarea id="accCausaBasica" rows="2" placeholder="Factor personal o de trabajo de fondo..."></textarea></div>
+            <div class="form-group"><label>Medidas Correctivas</label><textarea id="accCorrectivas" rows="2" placeholder="Acciones para evitar recurrencia..."></textarea></div>
+            <div class="form-row"><div class="form-group"><label>Investigado por</label><input type="text" id="accInvestigador" placeholder="Nombre del investigador"></div><div class="form-group"><label>Estado</label><select id="accEstado"><option value="abierto">Abierto</option><option value="en_investigacion">En Investigación</option><option value="cerrado">Cerrado</option></select></div></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="accidenteBtnCancel">Cancelar</button>
+          <button type="button" class="btn-danger" id="accidenteBtnDelete" style="display:none">Eliminar</button>
+          <button type="button" class="btn-primary" id="accidenteBtnSave">Guardar Registro</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL EXTINTOR ===== -->
+    <div class="modal-overlay" id="extinctorModalOverlay">
+      <div class="modal" id="extinctorModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(240,91,122,.12),rgba(245,166,35,.08));">
+          <h3 id="extinctorModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--danger)">fire_extinguisher</span>Extintor</h3>
+          <button class="btn-icon modal-close" id="extinctorModalClose"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <form id="extinctorForm">
+            <input type="hidden" id="extinctorId">
+            <div class="form-row"><div class="form-group"><label>N° / Código</label><input type="text" id="extCodigo" placeholder="Ej: EXT-001" required></div><div class="form-group"><label>Tipo</label><select id="extTipo"><option value="ABC">Polvo ABC</option><option value="CO2">CO₂</option><option value="agua">Agua</option><option value="espuma">Espuma</option><option value="clase_k">Clase K</option></select></div></div>
+            <div class="form-row"><div class="form-group"><label>Capacidad (kg/lt)</label><input type="text" id="extCapacidad" placeholder="Ej: 6 kg"></div><div class="form-group"><label>Ubicación</label><input type="text" id="extUbicacion" placeholder="Ej: Cubierta popa" required></div></div>
+            <div class="form-group"><label>Embarcación / Instalación</label><input type="text" id="extEmbarcacion" placeholder="Ej: María José, Oficina"></div>
+            <div class="form-row"><div class="form-group"><label>Última Recarga</label><input type="date" id="extUltimaRecarga"></div><div class="form-group"><label>Próxima Recarga</label><input type="date" id="extProximaRecarga"></div></div>
+            <div class="form-row"><div class="form-group"><label>Estado</label><select id="extEstado"><option value="operativo">Operativo</option><option value="por_recargar">Por Recargar</option><option value="en_recarga">En Recarga</option><option value="dado_baja">Dado de Baja</option></select></div><div class="form-group"><label>Empresa Recarga</label><input type="text" id="extEmpresa" placeholder="Nombre empresa"></div></div>
+            <div class="form-group"><label>Observaciones</label><textarea id="extObservaciones" rows="2" placeholder="Notas adicionales..."></textarea></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="extinctorBtnCancel">Cancelar</button>
+          <button type="button" class="btn-danger" id="extinctorBtnDelete" style="display:none">Eliminar</button>
+          <button type="button" class="btn-primary" id="extinctorBtnSave">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL EPP ===== -->
+    <div class="modal-overlay" id="eppModalOverlay">
+      <div class="modal" id="eppModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+          <h3 id="eppModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent-light)">security</span>Certificación EPP</h3>
+          <button class="btn-icon modal-close" id="eppModalClose"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <form id="eppForm">
+            <input type="hidden" id="eppId">
+            <div class="form-row"><div class="form-group"><label>Trabajador</label><input type="text" id="eppTrabajador" placeholder="Nombre completo" required></div><div class="form-group"><label>RUT</label><input type="text" id="eppRut" placeholder="12.345.678-9"></div></div>
+            <div class="form-row"><div class="form-group"><label>Tipo de EPP</label><select id="eppTipo"><option value="casco">Casco de Seguridad</option><option value="arnes">Arnés de Seguridad</option><option value="guantes">Guantes</option><option value="zapatos">Zapatos de Seguridad</option><option value="lentes">Lentes de Seguridad</option><option value="respirador">Respirador</option><option value="traje_buceo">Traje de Buceo</option><option value="chaleco">Chaleco Salvavidas</option><option value="protector_auditivo">Protector Auditivo</option><option value="otro">Otro</option></select></div><div class="form-group"><label>Marca / Modelo</label><input type="text" id="eppMarca" placeholder="Ej: 3M, Honeywell"></div></div>
+            <div class="form-row"><div class="form-group"><label>N° Certificación</label><input type="text" id="eppCertificacion" placeholder="Número de cert."></div><div class="form-group"><label>Talla / Especificación</label><input type="text" id="eppTalla" placeholder="Ej: L, 42"></div></div>
+            <div class="form-row"><div class="form-group"><label>Fecha Entrega</label><input type="date" id="eppFechaEntrega"></div><div class="form-group"><label>Fecha Vencimiento</label><input type="date" id="eppVencimiento"></div></div>
+            <div class="form-row"><div class="form-group"><label>Estado</label><select id="eppEstado"><option value="vigente">Vigente</option><option value="por_vencer">Por Vencer</option><option value="vencido">Vencido</option><option value="danado">Dañado / Reemplazar</option></select></div><div class="form-group"><label>Embarcación / Área</label><input type="text" id="eppArea" placeholder="Área de trabajo"></div></div>
+            <div class="form-group"><label>Observaciones</label><textarea id="eppObservaciones" rows="2" placeholder="Notas adicionales..."></textarea></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="eppBtnCancel">Cancelar</button>
+          <button type="button" class="btn-danger" id="eppBtnDelete" style="display:none">Eliminar</button>
+          <button type="button" class="btn-primary" id="eppBtnSave">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- ===== MODAL EDITAR EMBARCACIÓN ===== -->
+    <div class="modal-overlay" id="embEditModalOverlay">
+      <div class="modal modal-wide" id="embEditModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">directions_boat</span>Editar Embarcación</h3>
+          <button class="btn-icon" id="embEditClose"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="embEditViewId">
+          <div class="form-section-title">Datos Generales</div>
+          <div class="form-row">
+            <div class="form-group"><label>Nombre</label><input type="text" id="embEditNombre" placeholder="Nombre de la embarcación"></div>
+            <div class="form-group"><label>Matrícula</label><input type="text" id="embEditMatricula" placeholder="Ej: PG-50-09"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipo</label>
+              <select id="embEditTipo">
+                <option value="Embarcación de Trabajo">Embarcación de Trabajo</option>
+                <option value="Embarcación de Apoyo">Embarcación de Apoyo</option>
+                <option value="Embarcación de Carga">Embarcación de Carga</option>
+                <option value="Embarcación de Pesca">Embarcación de Pesca</option>
+                <option value="Embarcación Menor">Embarcación Menor</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Armador / Empresa</label><input type="text" id="embEditArmador" placeholder="Nombre empresa"></div>
+          </div>
+          <div class="form-section-title">Dimensiones y Motor</div>
+          <div class="form-row form-row-3">
+            <div class="form-group"><label>Eslora</label><input type="text" id="embEditEslora" placeholder="Ej: 18.5m"></div>
+            <div class="form-group"><label>Manga</label><input type="text" id="embEditManga" placeholder="Ej: 5.2m"></div>
+            <div class="form-group"><label>Calado</label><input type="text" id="embEditCalado" placeholder="Ej: 1.8m"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Motor</label><input type="text" id="embEditMotor" placeholder="Ej: Volvo Penta D6 — 370 HP"></div>
+            <div class="form-group"><label>Tripulación (personas)</label><input type="number" id="embEditTripulacion" placeholder="6" min="1"></div>
+          </div>
+          <div class="form-section-title">Ubicación y Puerto</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Zona</label>
+              <select id="embEditZona">
+                <option value="Zona Aysén">Zona Aysén</option>
+                <option value="Zona Natales">Zona Natales</option>
+                <option value="Zona Los Lagos">Zona Los Lagos</option>
+                <option value="Zona Magallanes">Zona Magallanes</option>
+                <option value="Otra">Otra</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Puerto Base</label><input type="text" id="embEditPuerto" placeholder="Ej: Puerto Melinka"></div>
+          </div>
+          <div class="form-section-title">Vigencias y Seguros</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado Patente</label>
+              <select id="embEditPatente">
+                <option value="Vigente">Vigente</option>
+                <option value="Por Renovar">Por Renovar</option>
+                <option value="Vencida">Vencida</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Aseguradora</label><input type="text" id="embEditAseguradora" placeholder="Ej: HDI Seguros"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Vencimiento Seguro</label><input type="date" id="embEditVencSeguro"></div>
+            <div class="form-group"><label>Vencimiento Directemar</label><input type="date" id="embEditVencDirectemar"></div>
+          </div>
+          <div class="form-group"><label>Observaciones</label><textarea id="embEditObservaciones" rows="3" placeholder="Notas sobre la embarcación..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="embEditCancel">Cancelar</button>
+          <button type="button" class="btn-primary" id="embEditSave">
+            <span class="material-icons-round">save</span> Guardar Cambios
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ===== MODAL FICHA TRABAJADOR EXAMEN ===== -->
+    <div class="modal-overlay" id="fichaExamenOverlay">
+      <div class="modal modal-wide" id="fichaExamenModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+          <h3 id="fichaExamenTitle">
+            <span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">person</span>
+            Ficha Trabajador
+          </h3>
+          <button class="btn-icon" id="fichaExamenClose"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Info general -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
+            <div style="background:var(--bg-hover);border-radius:10px;padding:1rem">
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:.6rem">Datos Personales</div>
+              <div id="fichaExamenInfo"></div>
+            </div>
+            <div style="background:var(--bg-hover);border-radius:10px;padding:1rem">
+              <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:.6rem">Vigencias</div>
+              <div id="fichaExamenVigencias"></div>
+            </div>
+          </div>
+
+          <!-- Link Google Drive -->
+          <div class="form-section-title" style="margin-top:0">Documento del Examen</div>
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.75rem">
+            <div style="flex:1">
+              <input type="text" id="fichaExamenDriveUrl" placeholder="Pega aquí el link de Google Drive del examen..." style="width:100%">
+            </div>
+            <a id="fichaExamenDriveBtn" href="#" target="_blank" class="btn-primary" style="display:none;align-items:center;gap:.4rem;white-space:nowrap;text-decoration:none">
+              <span class="material-icons-round" style="font-size:1rem">open_in_new</span> Abrir
+            </a>
+          </div>
+          <div class="form-group">
+            <label>Descripción del documento</label>
+            <input type="text" id="fichaExamenDriveDesc" placeholder="Ej: Examen Ocupacional 2026 — ACHS Coyhaique">
+          </div>
+
+          <!-- Notas -->
+          <div class="form-group">
+            <label>Notas / Comentarios</label>
+            <textarea id="fichaExamenNotas" rows="2" placeholder="Ej: Próxima cita en Puerto Montt, 04-06-2026..."></textarea>
+          </div>
+
+          <input type="hidden" id="fichaExamenId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="fichaExamenCancel">Cerrar</button>
+          <button type="button" class="btn-primary" id="fichaExamenSave">
+            <span class="material-icons-round">save</span> Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" onload="if(typeof refreshAll === 'function') refreshAll()"></script>
+    <script src="app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(() => {
+          console.log('[PWA] Service Worker registrado');
+        }).catch(e => console.warn('[PWA] Error SW:', e));
+      }
+    </script>
+</body>
+</html>
