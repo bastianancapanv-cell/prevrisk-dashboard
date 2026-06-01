@@ -456,134 +456,107 @@ document.addEventListener('click', e => {
 if (globalSearch) {
   globalSearch.addEventListener('input', async () => {
     const q = globalSearch.value.toLowerCase().trim();
-    
-    // Also run standard filter on background tables
     refreshAll();
 
     if (!q) {
-      if (searchResultsPanel) {
-        searchResultsPanel.classList.remove('active');
-        searchResultsPanel.innerHTML = '';
-      }
+      if (searchResultsPanel) { searchResultsPanel.classList.remove('active'); searchResultsPanel.innerHTML = ''; }
       return;
     }
 
-    // 1. Search in Dive Logs (Bitácoras)
-    const allDives = loadDives();
-    const matchedDives = allDives.filter(d => 
-      d.buzo.toLowerCase().includes(q) ||
-      (d.supervisor || '').toLowerCase().includes(q) ||
-      (d.lugar || '').toLowerCase().includes(q) ||
-      (d.matricula || '').toLowerCase().includes(q) ||
-      (d.observaciones || '').toLowerCase().includes(q)
-    );
+    const match = (str) => (str||'').toLowerCase().includes(q);
 
-    // 2. Search in general documents (prevrisk_items category === 'documento')
-    const allItems = loadItems();
-    const matchedGeneralDocs = allItems.filter(i => 
-      i.category === 'documento' && (
-        i.title.toLowerCase().includes(q) ||
-        (i.description || '').toLowerCase().includes(q) ||
-        (i.assignee || '').toLowerCase().includes(q)
-      )
-    );
+    // ── Fuentes de datos ─────────────────────────────────────────────
+    const allDives       = loadDives();
+    const allItems       = loadItems();
+    const allDbFiles     = await dbGetAllFiles();
+    const allInvs        = typeof loadInvestigaciones === 'function' ? loadInvestigaciones() : [];
+    const allPTS         = typeof loadPTS            === 'function' ? loadPTS()            : [];
+    const allEquipos     = typeof loadEquipos        === 'function' ? loadEquipos()        : [];
+    const allPlanes      = typeof loadPlanesEmerg    === 'function' ? loadPlanesEmerg()    : [];
+    const allCaps        = typeof loadCapRegistros   === 'function' ? loadCapRegistros()   : [];
+    const allDocCtrl     = typeof loadDocControl     === 'function' ? loadDocControl()     : [];
 
-    // 3. Search in all files loaded in IndexedDB
-    const allDbFiles = await dbGetAllFiles();
-    const matchedDbFiles = allDbFiles.filter(f => 
-      f.fileName.toLowerCase().includes(q) ||
-      (f.descripcion || '').toLowerCase().includes(q)
-    );
+    const mDives   = allDives.filter(d   => match(d.buzo)||match(d.supervisor)||match(d.lugar)||match(d.matricula)||match(d.observaciones));
+    const mDocs    = allItems.filter(i   => i.category==='documento' && (match(i.title)||match(i.description)||match(i.assignee)));
+    const mFiles   = allDbFiles.filter(f => match(f.fileName)||match(f.descripcion));
+    const mInvs    = allInvs.filter(i    => match(i.trabajador)||match(i.causaRaiz)||match(i.descripcion)||match(i.lugar));
+    const mPTS     = allPTS.filter(p     => match(p.nombre)||match(p.actividad)||match(p.epp)||match(p.objetivo));
+    const mEquipos = allEquipos.filter(e => match(e.nombre)||match(e.marca)||match(e.serie)||match(e.embarcacion));
+    const mPlanes  = allPlanes.filter(p  => match(p.embarcacion)||match(p.procedimiento));
+    const mCaps    = allCaps.filter(c    => match(c.tema)||match(c.relator)||match(c.lugar)||(c.asistentes||[]).some(a=>match(a.nombre)));
+    const mDocCtrl = allDocCtrl.filter(d => match(d.nombre)||match(d.tipo)||match(d.responsable)||match(d.desc));
 
-    // Render results
+    const total = mDives.length+mDocs.length+mFiles.length+mInvs.length+mPTS.length+mEquipos.length+mPlanes.length+mCaps.length+mDocCtrl.length;
     let html = '';
-    let totalCount = matchedDives.length + matchedGeneralDocs.length + matchedDbFiles.length;
 
-    if (totalCount === 0) {
-      html = `<div class="search-no-results">No se encontraron resultados para "${globalSearch.value}"</div>`;
+    const badge = (txt, c) => `<span class="result-badge" style="background:${c}22;color:${c};border-radius:5px;padding:.1rem .4rem;font-size:.65rem;font-weight:700;white-space:nowrap">${txt}</span>`;
+    const item  = (icon, iconC, title, sub, badgeHTML, onclick) =>
+      `<div class="search-result-item" onclick="${onclick}">
+        <div class="result-icon" style="color:${iconC}"><span class="material-icons-round">${icon}</span></div>
+        <div class="result-details"><span class="result-title">${title}</span><span class="result-subtitle">${sub}</span></div>
+        ${badgeHTML}
+      </div>`;
+
+    if (total === 0) {
+      html = `<div class="search-no-results">Sin resultados para "<strong>${globalSearch.value}</strong>"</div>`;
     } else {
-      // A. Section: Bitácoras de Buceo
-      if (matchedDives.length > 0) {
-        html += `<div class="search-group-title">Bitácoras de Buceo (${matchedDives.length})</div>`;
-        matchedDives.forEach(d => {
-          const vesselText = d.matricula ? d.matricula : (d.lugar.toLowerCase().includes('aukan') ? 'Aukan' : (d.lugar.toLowerCase().includes('jose') ? 'María José' : d.lugar));
-          const zoneText = d.zona === 'natales' ? 'Natales' : 'Aysén';
-          const dateStr = formatDate(d.fecha);
-          
-          html += `
-            <div class="search-result-item" onclick="openDiveLogFromResult('${d.id}')">
-              <div class="result-icon" style="color: var(--accent);"><span class="material-icons-round">scuba_diving</span></div>
-              <div class="result-details">
-                <span class="result-title">Bitácora: ${d.buzo}</span>
-                <span class="result-subtitle">
-                  <span>Sup: ${d.supervisor || 'S/N'}</span> &bull; 
-                  <span>${dateStr}</span> &bull;
-                  <span class="result-vessel">${vesselText}</span>
-                  <span class="result-zone">${zoneText}</span>
-                </span>
-              </div>
-              <span class="result-badge" style="background: rgba(108, 92, 231, 0.1); color: var(--accent-light);">Bitácora</span>
-            </div>
-          `;
+      if (mInvs.length) {
+        html += `<div class="search-group-title">Investigaciones (${mInvs.length})</div>`;
+        mInvs.slice(0,5).forEach(i => {
+          const ec={abierto:'var(--danger)',en_proceso:'var(--info)',cerrado:'var(--success)'};
+          html += item('policy','var(--danger)',`${i.trabajador||'—'} — ${i.tipoDeclaracion||''}`,`${i.fechaAccidente?formatDate(i.fechaAccidente):'—'} · ${i.embarcacion||''}`,badge(i.estado?.replace('_',' ')||'—',ec[i.estado]||'var(--text-muted)'),`navigateTo('investigacion');setTimeout(()=>openInvModal('${i.id}'),300)`);
         });
       }
-
-      // B. Section: Documentos del Sistema (prevrisk_items)
-      if (matchedGeneralDocs.length > 0) {
-        html += `<div class="search-group-title">Documentos del Sistema (${matchedGeneralDocs.length})</div>`;
-        matchedGeneralDocs.forEach(doc => {
-          const docLabels = { matriz:'Matriz', procedimiento:'PTS', acta:'Acta', informe:'Informe', checklist:'Checklist', odi_irl:'ODI/IRL', plan_emergencia:'Plan Emerg.', otro:'Otro' };
-          const label = docLabels[doc.docType] || 'Documento';
-          
-          html += `
-            <div class="search-result-item" onclick="openGeneralDocFromResult('${doc.id}')">
-              <div class="result-icon" style="color: var(--info);"><span class="material-icons-round">description</span></div>
-              <div class="result-details">
-                <span class="result-title">${doc.title}</span>
-                <span class="result-subtitle">Tipo: ${label} &bull; Estado: ${doc.status === 'completada' ? 'Completado' : 'Pendiente'}</span>
-              </div>
-              <span class="result-badge" style="background: rgba(116, 185, 255, 0.1); color: var(--info);">Documento</span>
-            </div>
-          `;
+      if (mPTS.length) {
+        html += `<div class="search-group-title">PTS / Procedimientos (${mPTS.length})</div>`;
+        mPTS.slice(0,4).forEach(p => {
+          html += item('engineering','var(--accent)',p.nombre||'—',`${p.actividad||'—'} · v${p.version||'1.0'} · ${p.fecha?formatDate(p.fecha):''}`,badge('PTS','var(--accent)'),`navigateTo('pts');setTimeout(()=>openPTSModal('${p.id}'),300)`);
         });
       }
-
-      // C. Section: Archivos Cargados (IndexedDB PDFs and Google Drive Links)
-      if (matchedDbFiles.length > 0) {
-        html += `<div class="search-group-title">Archivos y Enlaces Nube (${matchedDbFiles.length})</div>`;
-        matchedDbFiles.forEach(f => {
-          const isL = !!f.isLink;
-          // Determine parent label (e.g. Aukan, María José, etc. using entityKey)
-          const parentConfig = DETAIL_PAGES[f.entityKey];
-          const parentName = parentConfig ? parentConfig.title : 'General';
-          
-          // Make beautiful clean name for parent name display
-          let cleanParent = parentName;
-          if (cleanParent.startsWith('Embarcación ')) {
-            const boat = cleanParent.replace('Embarcación ', '');
-            cleanParent = `<span class="result-vessel">${boat}</span>`;
-          } else if (cleanParent.startsWith('Plan de Contingencia ')) {
-            const plan = cleanParent.replace('Plan de Contingencia ', 'Plan ');
-            cleanParent = `<span class="result-zone">${plan}</span>`;
-          }
-
-          const icon = isL ? 'cloud_queue' : 'insert_drive_file';
-          const color = isL ? 'var(--warning)' : 'var(--success)';
-          const fileLabel = isL ? 'Enlace' : 'PDF';
-
-          html += `
-            <div class="search-result-item" onclick="openFileFromResult('${f.id}')">
-              <div class="result-icon" style="color: ${color};"><span class="material-icons-round">${icon}</span></div>
-              <div class="result-details">
-                <span class="result-title">${f.descripcion || f.fileName}</span>
-                <span class="result-subtitle">
-                  <span>${f.fileName}</span> &bull; 
-                  <span>Asociado a: ${cleanParent}</span>
-                </span>
-              </div>
-              <span class="result-badge" style="background: ${isL ? 'rgba(253, 203, 110, 0.1)' : 'rgba(0, 206, 201, 0.1)'}; color: ${color};">${fileLabel}</span>
-            </div>
-          `;
+      if (mEquipos.length) {
+        html += `<div class="search-group-title">Equipos y Compresores (${mEquipos.length})</div>`;
+        const estC={operativo:'var(--success)',en_mant:'var(--info)',fuera_servicio:'var(--danger)'};
+        mEquipos.slice(0,4).forEach(e => {
+          html += item('build','var(--info)',`${e.nombre||'—'}`,`${e.marca||'—'} · ${e.embarcacion||'Sin asignar'}`,badge(e.estado?.replace('_',' ')||'—',estC[e.estado]||'var(--text-muted)'),`navigateTo('equipos');setTimeout(()=>openEquipoModal('${e.id}'),300)`);
+        });
+      }
+      if (mPlanes.length) {
+        html += `<div class="search-group-title">Planes de Emergencia (${mPlanes.length})</div>`;
+        mPlanes.slice(0,4).forEach(p => {
+          const tL={abandono_nave:'Abandono Nave',hombre_agua:'Hombre al Agua',incendio:'Incendio',varada:'Varada',otro:'Otro'};
+          html += item('sos','var(--danger)',`${p.embarcacion||'—'} — ${tL[p.tipo]||p.tipo||''}`,`${(p.roles||[]).length} roles · ${p.puntoEncuentro||''}`,badge('Emergencia','var(--danger)'),`navigateTo('plan-emerg');setTimeout(()=>openPlanEmergModal('${p.id}'),300)`);
+        });
+      }
+      if (mCaps.length) {
+        html += `<div class="search-group-title">Capacitaciones (${mCaps.length})</div>`;
+        mCaps.slice(0,4).forEach(c => {
+          html += item('school','var(--success)',c.tema||'—',`${c.fecha?formatDate(c.fecha):'—'} · ${c.relator||'—'} · ${(c.asistentes||[]).length} asistentes`,badge('Cap.','var(--success)'),`navigateTo('cap-registro');setTimeout(()=>openCapRegistroModal('${c.id}'),300)`);
+        });
+      }
+      if (mDocCtrl.length) {
+        html += `<div class="search-group-title">Control de Documentos (${mDocCtrl.length})</div>`;
+        const ec2={vigente:'var(--success)',por_revisar:'var(--warning)',vencido:'var(--danger)'};
+        mDocCtrl.slice(0,4).forEach(d => {
+          html += item('manage_search','var(--accent)',d.nombre||'—',`${d.tipo||'—'} · v${d.version||'1.0'} · ${d.responsable||'—'}`,badge(d._estado?.replace('_',' ')||'—',ec2[d._estado]||'var(--text-muted)'),`navigateTo('doc-control');setTimeout(()=>openDocControlModal('${d.id}'),300)`);
+        });
+      }
+      if (mDives.length) {
+        html += `<div class="search-group-title">Bitácoras de Buceo (${mDives.length})</div>`;
+        mDives.slice(0,4).forEach(d => {
+          html += item('scuba_diving','var(--accent)',`Buceo: ${d.buzo}`,`${d.supervisor||'S/N'} · ${formatDate(d.fecha)} · ${d.lugar||''}`,badge('Buceo','var(--accent)'),`openDiveLogFromResult('${d.id}')`);
+        });
+      }
+      if (mDocs.length) {
+        html += `<div class="search-group-title">Documentos del Sistema (${mDocs.length})</div>`;
+        mDocs.slice(0,3).forEach(d => {
+          html += item('description','var(--info)',d.title,`${d.docType||'—'} · ${d.status==='completada'?'Completado':'Pendiente'}`,badge('Doc','var(--info)'),`openGeneralDocFromResult('${d.id}')`);
+        });
+      }
+      if (mFiles.length) {
+        html += `<div class="search-group-title">Archivos y Nube (${mFiles.length})</div>`;
+        mFiles.slice(0,3).forEach(f => {
+          const c = f.isLink?'var(--warning)':'var(--success)';
+          html += item(f.isLink?'cloud_queue':'insert_drive_file',c,f.descripcion||f.fileName,f.fileName,badge(f.isLink?'Link':'PDF',c),`openFileFromResult('${f.id}')`);
         });
       }
     }
