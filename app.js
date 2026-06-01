@@ -679,7 +679,7 @@ function refreshDashboard(items) {
     // Check if there is data, otherwise show empty gray ring
     const hasData = (pending + progress + done) > 0;
     const chartData = hasData ? [pending, progress, done] : [1];
-    const chartColors = hasData ? ['#f5a623', '#5bb8f0', '#10d9a0'] : ['#e0e0e0'];
+    const chartColors = hasData ? ['#eab308', '#38bdf8', '#22c55e'] : ['#27272a'];
     const chartLabels = hasData ? ['Pendientes', 'En Progreso', 'Completadas'] : ['Sin Datos'];
 
     myStatusChart = new Chart(ctxStatus, {
@@ -698,7 +698,7 @@ function refreshDashboard(items) {
         maintainAspectRatio: false,
         cutout: '70%',
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#8b95b0', font: { family: 'DM Sans', size: 11 } } },
+          legend: { position: 'bottom', labels: { color: '#71717a', font: { family: 'DM Sans', size: 11 } } },
           tooltip: { enabled: hasData }
         }
       }
@@ -720,7 +720,7 @@ function refreshDashboard(items) {
         datasets: [{
           label: 'Total',
           data: [tareas, capacitaciones, documentos],
-          backgroundColor: ['#5b8af0', '#10d9a0', '#5bb8f0'],
+          backgroundColor: ['#8b5cf6', '#22c55e', '#38bdf8'],
           borderRadius: 4
         }]
       },
@@ -736,8 +736,8 @@ function refreshDashboard(items) {
           }
         },
         scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1, color: '#8b95b0' }, grid: { color: 'rgba(255,255,255,0.04)' } },
-          x: { ticks: { color: '#8b95b0', font: { size: 10 } }, grid: { display: false } }
+          y: { beginAtZero: true, ticks: { stepSize: 1, color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          x: { ticks: { color: '#71717a', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -3501,16 +3501,16 @@ function renderTrendChart() {
     data: {
       labels: months,
       datasets: [
-        { label: 'Creadas', data: createdData, borderColor: '#5b8af0', backgroundColor: 'rgba(91,138,240,.12)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#5b8af0' },
-        { label: 'Completadas', data: completedData, borderColor: '#10d9a0', backgroundColor: 'rgba(16,217,160,.1)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#10d9a0' }
+        { label: 'Creadas', data: createdData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.12)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+        { label: 'Completadas', data: completedData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.1)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#22c55e' }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#8b95b0', font: { size: 11 }, padding: 12 } } },
+      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', font: { size: 11 }, padding: 12 } } },
       scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#8b95b0' }, grid: { color: 'rgba(255,255,255,.04)' } },
-        x: { ticks: { color: '#8b95b0', font: { size: 11 } }, grid: { display: false } }
+        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#71717a' }, grid: { color: 'rgba(255,255,255,.04)' } },
+        x: { ticks: { color: '#71717a', font: { size: 11 } }, grid: { display: false } }
       }
     }
   });
@@ -3570,8 +3570,8 @@ function loadGantt() { try { return JSON.parse(localStorage.getItem(GANTT_KEY)) 
 function saveGantt(data) { localStorage.setItem(GANTT_KEY, JSON.stringify(data)); cloudSave('store/gantt', data); }
 
 const GANTT_COLORS = {
-  capacitacion: '#5b8af0', inspeccion: '#f5a623', documento: '#5bb8f0',
-  auditoria: '#a855f7', simulacro: '#f05b7a', reunion: '#10d9a0', otro: '#8b95b0'
+  capacitacion: '#8b5cf6', inspeccion: '#eab308', documento: '#38bdf8',
+  auditoria: '#a855f7', simulacro: '#ef4444', reunion: '#22c55e', otro: '#71717a'
 };
 const GANTT_LABELS = {
   capacitacion: 'Capacitación', inspeccion: 'Inspección', documento: 'Documento',
@@ -3638,7 +3638,7 @@ function renderGantt() {
     const durDays = Math.ceil((gEnd - gStart) / 86400000) + 1;
     const offsetPx = offsetDays * dayW;
     const widthPx = Math.max(durDays * dayW, 40);
-    const color = GANTT_COLORS[g.categoria] || '#8b95b0';
+    const color = GANTT_COLORS[g.categoria] || '#71717a';
     const avance = parseInt(g.avance) || 0;
 
     const estadoIcon = { pendiente: '⏳', en_progreso: '🔄', completada: '✅', atrasada: '⚠️' }[g.estado] || '';
@@ -4219,14 +4219,14 @@ function exportarPDF(modulo) {
       titulo = 'Reporte General PrevRisk';
       contenido = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
-          ${[['Pendientes',pendientes,'#f5a623'],['En Progreso',progreso,'#5bb8f0'],['Completadas',completadas,'#10d9a0'],['Vencidas',vencidas,'#f05b7a']].map(([l,v,c])=>`
+          ${[['Pendientes',pendientes,'#eab308'],['En Progreso',progreso,'#38bdf8'],['Completadas',completadas,'#22c55e'],['Vencidas',vencidas,'#ef4444']].map(([l,v,c])=>`
           <div style="border:2px solid ${c};border-radius:10px;padding:1rem;text-align:center">
             <div style="font-size:2rem;font-weight:900;color:${c}">${v}</div>
             <div style="font-size:.8rem;font-weight:600;color:#555">${l}</div>
           </div>`).join('')}
         </div>
         <div style="background:#f0f3fb;border-radius:10px;padding:1rem;text-align:center;margin-bottom:1.5rem">
-          <div style="font-size:2.5rem;font-weight:900;color:#5b8af0">${cumplimiento}%</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#8b5cf6">${cumplimiento}%</div>
           <div style="font-size:.85rem;color:#555">Cumplimiento General</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:.82rem">
@@ -4272,9 +4272,9 @@ function exportarPDF(modulo) {
     <style>
       body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 2rem; color: #1a1d27; background: #fff; }
       h1 { font-size: 1.4rem; font-weight: 800; color: #1a1d27; margin: 0; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #5b8af0; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #8b5cf6; padding-bottom: 1rem; margin-bottom: 1.5rem; }
       .logo { display: flex; align-items: center; gap: .6rem; }
-      .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #5b8af0, #7c5bf5); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 1rem; }
+      .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 1rem; }
       .meta { text-align: right; font-size: .75rem; color: #666; }
       .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; text-align: center; font-size: .7rem; color: #888; }
       @media print { body { padding: 1rem; } }
