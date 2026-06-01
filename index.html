@@ -64,23 +64,46 @@
             </div>
         </div>
         <nav class="sidebar-nav">
+
+            <!-- ── OPERACIONES ── -->
+            <div class="nav-section-label">Operaciones</div>
             <a href="#" class="nav-item active" data-view="dashboard">
                 <span class="material-icons-round">dashboard</span>
                 <span class="nav-label">Dashboard</span>
             </a>
             <a href="#" class="nav-item" data-view="tareas">
                 <span class="material-icons-round">task_alt</span>
-                <span class="nav-label">Tareas (Kanban)</span>
-            </a>
-            <a href="#" class="nav-item" data-view="personal">
-                <span class="material-icons-round">badge</span>
-                <span class="nav-label">Personal (Fichas)</span>
+                <span class="nav-label">Tareas y Kanban</span>
             </a>
             <a href="#" class="nav-item" data-view="calendario">
                 <span class="material-icons-round">calendar_month</span>
                 <span class="nav-label">Calendario</span>
             </a>
 
+            <!-- ── PERSONAL ── -->
+            <div class="nav-section-label">Personal</div>
+            <a href="#" class="nav-item" data-view="personal">
+                <span class="material-icons-round">badge</span>
+                <span class="nav-label">Personal (Fichas)</span>
+            </a>
+            <a href="#" class="nav-item" data-view="examenes">
+                <span class="material-icons-round">health_and_safety</span>
+                <span class="nav-label">Exámenes Ocupacionales</span>
+            </a>
+            <a href="#" class="nav-item" data-view="salud-ocup">
+                <span class="material-icons-round">monitor_heart</span>
+                <span class="nav-label">Salud Ocupacional</span>
+            </a>
+            <a href="#" class="nav-item" data-view="cap-registro">
+                <span class="material-icons-round">school</span>
+                <span class="nav-label">Registro Capacitaciones</span>
+            </a>
+            <a href="#" class="nav-item" data-view="epp">
+                <span class="material-icons-round">security</span>
+                <span class="nav-label">Certificaciones EPP</span>
+            </a>
+
+            <!-- ── GESTIÓN SST ── -->
             <div class="nav-section-label">Gestión SST</div>
             <div class="nav-group">
                 <div class="nav-group-header" data-group="sistema">
@@ -94,14 +117,12 @@
                     <a href="#" class="nav-sub-item" data-view="sst-carta-gantt">Carta Gantt</a>
                     <a href="#" class="nav-sub-item" data-view="sst-apr">APR / Encargado PRL</a>
                     <a href="#" class="nav-sub-item" data-view="sst-delegados">Delegados SST</a>
-                    <a href="#" class="nav-sub-item" data-view="inspecciones-v2">Inspecciones Plus</a>
-                    <a href="#" class="nav-sub-item" data-view="cap-registro">Registro Capacitaciones</a>
                 </div>
             </div>
             <div class="nav-group">
                 <div class="nav-group-header" data-group="miper">
                     <span class="material-icons-round">grid_on</span>
-                    <span class="nav-label">MIPER / Matrices</span>
+                    <span class="nav-label">IPER / Matrices</span>
                     <span class="material-icons-round nav-chevron">expand_more</span>
                 </div>
                 <div class="nav-group-items" id="navGroupMiper">
@@ -109,8 +130,28 @@
                     <a href="#" class="nav-sub-item" data-view="miper-procedimiento">Procedimiento MIPER</a>
                 </div>
             </div>
+            <a href="#" class="nav-item" data-view="acc-nomina">
+                <span class="material-icons-round">local_hospital</span>
+                <span class="nav-label">Accidentes e Incidentes</span>
+            </a>
+            <a href="#" class="nav-item" data-view="investigacion">
+                <span class="material-icons-round">policy</span>
+                <span class="nav-label">Investigación Accidentes</span>
+            </a>
+            <a href="#" class="nav-item" data-view="estadisticas-acc">
+                <span class="material-icons-round">analytics</span>
+                <span class="nav-label">Estadísticas Accid.</span>
+            </a>
+            <a href="#" class="nav-item" data-view="inspecciones-v2">
+                <span class="material-icons-round">search</span>
+                <span class="nav-label">Inspecciones</span>
+            </a>
+            <a href="#" class="nav-item" data-view="extintores">
+                <span class="material-icons-round">fire_extinguisher</span>
+                <span class="nav-label">Control Extintores</span>
+            </a>
 
-
+            <!-- ── LEGAL Y NORMATIVO ── -->
             <div class="nav-section-label">Legal y Normativo</div>
             <a href="#" class="nav-item" data-view="riohs">
                 <span class="material-icons-round">gavel</span>
@@ -143,22 +184,8 @@
                 </div>
             </div>
 
-            <div class="nav-section-label">Accidentes y Casos</div>
-            <div class="nav-group">
-                <div class="nav-group-header" data-group="accidentes">
-                    <span class="material-icons-round">local_hospital</span>
-                    <span class="nav-label">Accidentes</span>
-                    <span class="material-icons-round nav-chevron">expand_more</span>
-                </div>
-                <div class="nav-group-items" id="navGroupAccidentes">
-                    <a href="#" class="nav-sub-item" data-view="acc-nomina">Nómina Accidentes</a>
-                    <a href="#" class="nav-sub-item" data-view="acc-procedimiento">Proc. ante Accidente</a>
-                    <a href="#" class="nav-sub-item" data-view="investigacion">Investigación Acc.</a>
-                    <a href="#" class="nav-sub-item" data-view="estadisticas-acc">Estadísticas Accid.</a>
-                </div>
-            </div>
-
-            <div class="nav-section-label">Embarcaciones</div>
+            <!-- ── FLOTA Y OPERACIONES MARÍTIMAS ── -->
+            <div class="nav-section-label">Flota y Op. Marítimas</div>
             <div class="nav-group">
                 <div class="nav-group-header" data-group="embarcaciones">
                     <span class="material-icons-round">directions_boat</span>
@@ -171,17 +198,20 @@
                     <a href="#" class="nav-sub-item" data-view="emb-aukan">Aukan <span class="nav-badge nav-badge-ok">Activa</span></a>
                     <a href="#" class="nav-sub-item" data-view="emb-don-humberto">Don Humberto <span class="nav-badge nav-badge-warn">Parada</span></a>
                     <a href="#" class="nav-sub-item" data-view="emb-lafquen">Lafquen <span class="nav-badge nav-badge-warn">Parada</span></a>
-                    <a href="#" class="nav-sub-item" data-view="equipos">Equipos y Compresores</a>
-                    <a href="#" class="nav-sub-item" data-view="plan-emerg">Planes de Emergencia</a>
                 </div>
             </div>
-
-
-            <div class="nav-section-label">Buceo</div>
+            <a href="#" class="nav-item" data-view="equipos">
+                <span class="material-icons-round">build</span>
+                <span class="nav-label">Equipos y Compresores</span>
+            </a>
+            <a href="#" class="nav-item" data-view="plan-emerg">
+                <span class="material-icons-round">sos</span>
+                <span class="nav-label">Planes de Emergencia</span>
+            </a>
             <div class="nav-group">
                 <div class="nav-group-header" data-group="planes">
                     <span class="material-icons-round">emergency</span>
-                    <span class="nav-label">Planes Contingencia</span>
+                    <span class="nav-label">Contingencia Buceo</span>
                     <span class="material-icons-round nav-chevron">expand_more</span>
                 </div>
                 <div class="nav-group-items" id="navGroupPlanes">
@@ -197,11 +227,24 @@
                 <span class="nav-label">Bitácoras Buceo</span>
             </a>
 
+            <!-- ── DOCUMENTACIÓN ── -->
             <div class="nav-section-label">Documentación</div>
             <a href="#" class="nav-item" data-view="documentos">
                 <span class="material-icons-round">folder</span>
                 <span class="nav-label">Documentos Generales</span>
             </a>
+            <div class="nav-group">
+                <div class="nav-group-header" data-group="pts">
+                    <span class="material-icons-round">engineering</span>
+                    <span class="nav-label">PTS / Procedimientos</span>
+                    <span class="material-icons-round nav-chevron">expand_more</span>
+                </div>
+                <div class="nav-group-items" id="navGroupPTS">
+                    <a href="#" class="nav-sub-item" data-view="pts">Módulo PTS</a>
+                    <a href="#" class="nav-sub-item" data-view="pts-banos">PTS Baños de Peces</a>
+                    <a href="#" class="nav-sub-item" data-view="pts-tensores">PTS Tensores</a>
+                </div>
+            </div>
             <div class="nav-group">
                 <div class="nav-group-header" data-group="cartas">
                     <span class="material-icons-round">mail</span>
@@ -213,38 +256,9 @@
                     <a href="#" class="nav-sub-item" data-view="cartas-formatos">Formatos</a>
                 </div>
             </div>
-
-            <div class="nav-group">
-                <div class="nav-group-header" data-group="pts">
-                    <span class="material-icons-round">engineering</span>
-                    <span class="nav-label">PTS (Procedimientos)</span>
-                    <span class="material-icons-round nav-chevron">expand_more</span>
-                </div>
-                <div class="nav-group-items" id="navGroupPTS">
-                    <a href="#" class="nav-sub-item" data-view="pts">Módulo PTS</a>
-                    <a href="#" class="nav-sub-item" data-view="pts-banos">PTS Baños de Peces</a>
-                    <a href="#" class="nav-sub-item" data-view="pts-tensores">PTS Tensores</a>
-                </div>
-            </div>
-            <a href="#" class="nav-item" data-view="examenes">
-                <span class="material-icons-round">health_and_safety</span>
-                <span class="nav-label">Exámenes Ocup.</span>
-            </a>
-            <a href="#" class="nav-item" data-view="extintores">
-                <span class="material-icons-round">fire_extinguisher</span>
-                <span class="nav-label">Extintores</span>
-            </a>
-            <a href="#" class="nav-item" data-view="epp">
-                <span class="material-icons-round">security</span>
-                <span class="nav-label">Certificaciones EPP</span>
-            </a>
-            <a href="#" class="nav-item" data-view="salud-ocup">
-                <span class="material-icons-round">monitor_heart</span>
-                <span class="nav-label">Salud Ocupacional</span>
-            </a>
             <a href="#" class="nav-item" data-view="doc-control">
                 <span class="material-icons-round">manage_search</span>
-                <span class="nav-label">Control Documentos</span>
+                <span class="nav-label">Control de Documentos</span>
             </a>
 
         </nav>
