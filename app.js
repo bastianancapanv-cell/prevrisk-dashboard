@@ -1616,11 +1616,6 @@ const DETAIL_PAGES = {
     icon: 'emergency', color: 'var(--danger)',
     checklist: ['Primeros auxilios inmediatos', 'Notificación al supervisor', 'Traslado a centro asistencial', 'Denuncia Individual de Accidente (DIAT)', 'Investigación del accidente', 'Identificación de causas raíz', 'Definición de medidas correctivas', 'Seguimiento de implementación']
   },
-  'acc-caso-gomez': {
-    title: 'Caso Juan Gómez', subtitle: 'Medidas prescriptivas — Cartas y documentación del caso',
-    icon: 'folder_special', color: 'var(--warning)', checklist: null
-  },
-
   // ===== PLANES EMERGENCIA EMBARCACIONES =====
   'pemb-maria-jose': {
     title: 'Plan Emergencia — María José', subtitle: 'Plan de emergencia + Resolución + Plan Hidrocarburos + Carta Conductora',
