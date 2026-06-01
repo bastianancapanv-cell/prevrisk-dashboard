@@ -5264,38 +5264,129 @@ document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementBy
 // ================================================================
 // ===== MÓDULO 8: KPI DASHBOARD DE SEGURIDAD =====
 // ================================================================
-function refreshKPIDashboard(){
-  const grid=document.getElementById('kpiGrid');if(!grid)return;
-  const today=new Date().toISOString().split('T')[0];
-  const in30=new Date();in30.setDate(in30.getDate()+30);const in30s=in30.toISOString().split('T')[0];
-  const items=loadItems(); const accs=loadAccidentes(); const exts=loadExtintores(); const epps=loadEPP();
-  const docs=typeof loadDocControl==='function'?loadDocControl():[];
-  const caps=typeof loadCapRegistros==='function'?loadCapRegistros():[];
-  const thisMonthAcc=accs.filter(a=>{if(!a.fecha)return false;const d=new Date(a.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length;
-  const ultimoAcc=accs.map(a=>a.fecha).filter(Boolean).sort().pop()||'';
-  const diasSin=ultimoAcc?Math.max(0,Math.floor((new Date()-new Date(ultimoAcc))/(1000*60*60*24))):365;
-  const totalItems=items.length; const compItems=items.filter(i=>i.status==='completada').length;
-  const pctPrograma=totalItems>0?Math.round(compItems/totalItems*100):100;
-  const extTotal=exts.filter(e=>e.estado!=='dado_baja').length; const extOk=exts.filter(e=>e.estado==='operativo').length;
-  const pctExt=extTotal>0?Math.round(extOk/extTotal*100):100;
-  const eppTotal=epps.length; const eppVig=epps.filter(e=>e.estado==='vigente'||(!e.vencimiento)).length;
-  const pctEPP=eppTotal>0?Math.round(eppVig/eppTotal*100):100;
-  const docVig=docs.filter(d=>d._estado==='vigente').length; const pctDoc=docs.length>0?Math.round(docVig/docs.length*100):100;
-  const insp=typeof loadInspeccionesV2==='function'?loadInspeccionesV2():[];
-  const inspMes=insp.filter(i=>{if(!i.fecha)return false;const d=new Date(i.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length;
-  const kpis=[
-    {label:'Prog. Preventivo',value:pctPrograma+'%',icon:'task_alt',semaforo:pctPrograma>=80?'green':pctPrograma>=50?'yellow':'red',desc:`${compItems}/${totalItems} completadas`},
-    {label:'Acc. este Mes',value:thisMonthAcc,icon:'local_hospital',semaforo:thisMonthAcc===0?'green':thisMonthAcc<=2?'yellow':'red',desc:thisMonthAcc===0?'Sin accidentes':'Con accidentes'},
-    {label:'Días sin Acc.',value:diasSin,icon:'event_available',semaforo:diasSin>=30?'green':diasSin>=7?'yellow':'red',desc:`Último: ${ultimoAcc?formatDate(ultimoAcc):'Ninguno'}`},
-    {label:'Extintores Op.',value:pctExt+'%',icon:'fire_extinguisher',semaforo:pctExt>=90?'green':pctExt>=70?'yellow':'red',desc:`${extOk}/${extTotal} operativos`},
-    {label:'EPP Vigentes',value:pctEPP+'%',icon:'security',semaforo:pctEPP>=90?'green':pctEPP>=70?'yellow':'red',desc:`${eppVig}/${eppTotal} vigentes`},
-    {label:'Docs Vigentes',value:pctDoc+'%',icon:'manage_search',semaforo:pctDoc>=90?'green':pctDoc>=70?'yellow':'red',desc:`${docVig}/${docs.length} vigentes`},
-    {label:'Insp. este Mes',value:inspMes,icon:'search',semaforo:inspMes>=2?'green':inspMes>=1?'yellow':'red',desc:inspMes===0?'Sin inspecciones':'Realizadas'},
-    {label:'Caps. este Mes',value:caps.filter(c=>{if(!c.fecha)return false;const d=new Date(c.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length,icon:'school',semaforo:'green',desc:'Capacitaciones'},
+function refreshKPIDashboard() {
+  const grid = document.getElementById('kpiGrid');
+  if (!grid) return;
+
+  const now   = new Date();
+  const mes   = now.getMonth();
+  const anio  = now.getFullYear();
+  const isMes = d => { const x = new Date(d); return x.getMonth()===mes && x.getFullYear()===anio; };
+
+  // ── Datos fuente ──────────────────────────────────────────────────
+  const items = loadItems();
+  const accs  = loadAccidentes();
+  const exts  = loadExtintores();
+  const epps  = loadEPP();
+  const docs  = typeof loadDocControl   === 'function' ? loadDocControl()   : [];
+  const caps  = typeof loadCapRegistros === 'function' ? loadCapRegistros() : [];
+  const insp  = typeof loadInspeccionesV2==='function' ? loadInspeccionesV2(): [];
+
+  // ── % Cumplimiento Programa Preventivo ───────────────────────────
+  const totalItems = items.length;
+  const compItems  = items.filter(i => i.status === 'completada').length;
+  const pctProg    = totalItems > 0 ? Math.round(compItems / totalItems * 100) : 100;
+
+  // ── Días sin accidentes ───────────────────────────────────────────
+  const ultimoAcc = accs.map(a => a.fecha).filter(Boolean).sort().pop() || '';
+  const diasSin   = ultimoAcc
+    ? Math.max(0, Math.floor((now - new Date(ultimoAcc)) / 86400000))
+    : 365;
+
+  // ── Inspecciones realizadas vs planificadas ───────────────────────
+  const inspRealizadas   = insp.filter(i => i.fecha && isMes(i.fecha)).length;
+  const inspPlanificadas = items.filter(i => i.category === 'inspeccion' && i.dueDate && isMes(i.dueDate)).length || 2;
+  const pctInsp = Math.min(100, Math.round(inspRealizadas / inspPlanificadas * 100));
+
+  // ── Capacitaciones realizadas vs planificadas ────────────────────
+  const capRealizadas   = caps.filter(c => c.fecha && isMes(c.fecha)).length;
+  const capPlanificadas = items.filter(i => i.category === 'capacitacion' && i.dueDate && isMes(i.dueDate)).length || 1;
+  const pctCap = Math.min(100, Math.round(capRealizadas / capPlanificadas * 100));
+
+  // ── % Extintores operativos ───────────────────────────────────────
+  const extTotal = exts.filter(e => e.estado !== 'dado_baja').length;
+  const extOk    = exts.filter(e => e.estado === 'operativo').length;
+  const pctExt   = extTotal > 0 ? Math.round(extOk / extTotal * 100) : 100;
+
+  // ── % EPP vigentes ────────────────────────────────────────────────
+  const today  = now.toISOString().split('T')[0];
+  const eppOk  = epps.filter(e => !e.vencimiento || e.vencimiento >= today).length;
+  const pctEPP = epps.length > 0 ? Math.round(eppOk / epps.length * 100) : 100;
+
+  // ── Semáforo genérico: Verde >80%, Amarillo 50-80%, Rojo <50% ────
+  const sem = (v, inverted = false) => {
+    if (inverted) return v === 0 ? 'green' : v <= 2 ? 'yellow' : 'red';
+    return v >= 80 ? 'green' : v >= 50 ? 'yellow' : 'red';
+  };
+  const semDias = d => d >= 30 ? 'green' : d >= 7 ? 'yellow' : 'red';
+
+  const kpis = [
+    {
+      label: 'Cumpl. Programa',
+      value: pctProg + '%',
+      icon: 'task_alt',
+      semaforo: sem(pctProg),
+      desc: `${compItems} de ${totalItems} tareas completadas`,
+    },
+    {
+      label: 'Días sin Accidentes',
+      value: diasSin,
+      icon: 'event_available',
+      semaforo: semDias(diasSin),
+      desc: ultimoAcc ? `Último: ${formatDate(ultimoAcc)}` : 'Sin accidentes registrados',
+    },
+    {
+      label: 'Inspecciones',
+      value: `${inspRealizadas}/${inspPlanificadas}`,
+      icon: 'search',
+      semaforo: sem(pctInsp),
+      desc: `${pctInsp}% — este mes`,
+    },
+    {
+      label: 'Capacitaciones',
+      value: `${capRealizadas}/${capPlanificadas}`,
+      icon: 'school',
+      semaforo: sem(pctCap),
+      desc: `${pctCap}% — este mes`,
+    },
+    {
+      label: 'Extintores Op.',
+      value: pctExt + '%',
+      icon: 'fire_extinguisher',
+      semaforo: sem(pctExt),
+      desc: `${extOk} de ${extTotal} operativos`,
+    },
+    {
+      label: 'EPP Vigentes',
+      value: pctEPP + '%',
+      icon: 'security',
+      semaforo: sem(pctEPP),
+      desc: `${eppOk} de ${epps.length} vigentes`,
+    },
   ];
-  const sColor={green:'var(--success)',yellow:'var(--warning)',red:'var(--danger)'};
-  const sBg={green:'rgba(34,197,94,.12)',yellow:'rgba(234,179,8,.12)',red:'rgba(239,68,68,.12)'};
-  grid.innerHTML=kpis.map(k=>`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem;display:flex;align-items:center;gap:.75rem;transition:var(--transition)" onmouseenter="this.style.borderColor='${sColor[k.semaforo]}'" onmouseleave="this.style.borderColor='var(--border)'"><div style="width:40px;height:40px;border-radius:10px;background:${sBg[k.semaforo]};display:grid;place-items:center;flex-shrink:0"><span class="material-icons-round" style="color:${sColor[k.semaforo]};font-size:1.2rem">${k.icon}</span></div><div style="flex:1;min-width:0"><div style="font-size:1.35rem;font-weight:900;color:${sColor[k.semaforo]};line-height:1.1">${k.value}</div><div style="font-size:.72rem;font-weight:700;color:var(--text-secondary);margin-top:.08rem">${k.label}</div><div style="font-size:.67rem;color:var(--text-muted);margin-top:.05rem">${k.desc}</div></div><div style="width:10px;height:10px;border-radius:50%;background:${sColor[k.semaforo]};box-shadow:0 0 8px ${sColor[k.semaforo]};flex-shrink:0"></div></div>`).join('');
+
+  const sColor = { green: 'var(--success)', yellow: 'var(--warning)', red: 'var(--danger)' };
+  const sBg    = { green: 'rgba(34,197,94,.12)', yellow: 'rgba(234,179,8,.12)', red: 'rgba(239,68,68,.12)' };
+  const sBorder= { green: 'rgba(34,197,94,.35)', yellow: 'rgba(234,179,8,.35)', red: 'rgba(239,68,68,.35)' };
+
+  grid.innerHTML = kpis.map(k => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-top:3px solid ${sColor[k.semaforo]};border-radius:var(--radius);padding:1rem 1.1rem;display:flex;align-items:center;gap:.85rem;transition:var(--transition);cursor:default"
+         onmouseenter="this.style.boxShadow='0 6px 24px ${sBg[k.semaforo].replace('.12','.25')}';this.style.borderColor='${sBorder[k.semaforo]}'"
+         onmouseleave="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+      <div style="width:44px;height:44px;border-radius:11px;background:${sBg[k.semaforo]};display:grid;place-items:center;flex-shrink:0">
+        <span class="material-icons-round" style="color:${sColor[k.semaforo]};font-size:1.25rem">${k.icon}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:1.5rem;font-weight:900;color:${sColor[k.semaforo]};line-height:1;letter-spacing:-.5px">${k.value}</div>
+        <div style="font-size:.73rem;font-weight:700;color:var(--text);margin-top:.18rem">${k.label}</div>
+        <div style="font-size:.67rem;color:var(--text-muted);margin-top:.06rem">${k.desc}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0">
+        <div style="width:9px;height:9px;border-radius:50%;background:${k.semaforo==='green'?'var(--success)':'rgba(34,197,94,.2)'};box-shadow:${k.semaforo==='green'?'0 0 7px var(--success)':'none'}"></div>
+        <div style="width:9px;height:9px;border-radius:50%;background:${k.semaforo==='yellow'?'var(--warning)':'rgba(234,179,8,.2)'};box-shadow:${k.semaforo==='yellow'?'0 0 7px var(--warning)':'none'}"></div>
+        <div style="width:9px;height:9px;border-radius:50%;background:${k.semaforo==='red'?'var(--danger)':'rgba(239,68,68,.2)'};box-shadow:${k.semaforo==='red'?'0 0 7px var(--danger)':'none'}"></div>
+      </div>
+    </div>`).join('');
 }
 
 // ================================================================
