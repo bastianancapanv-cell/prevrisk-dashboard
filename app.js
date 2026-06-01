@@ -2744,7 +2744,7 @@ async function init(){
   const hideLoader=()=>{const ls=document.getElementById('loadingScreen');if(ls){ls.style.opacity='0';setTimeout(()=>{ls.style.display='none';},500);}};
   const lt=setTimeout(hideLoader,5000);
   const sess=sessionStorage.getItem('prevrisk_session');
-  if(!sess){const ov=document.getElementById('loginOverlay');if(ov){ov.style.display='grid';ov.classList.add('active');}const main=document.getElementById('mainContent');const sb=document.getElementById('sidebar');if(main)main.style.filter='blur(6px) brightness(.35)';if(sb)sb.style.filter='blur(6px) brightness(.35)';}
+  if(!sess){const ov=document.getElementById('loginOverlay');if(ov){ov.style.display='grid';ov.classList.add('active');}}
   else{const ov=document.getElementById('loginOverlay');if(ov){ov.classList.remove('active');ov.style.display='none';}}
   // Limpieza única de datos demo pre-seeded (ejecuta solo una vez)
   if (!localStorage.getItem('prevrisk_demo_cleared_v1')) {
@@ -2784,11 +2784,7 @@ function showLogin() {
     overlay.style.display = 'grid';
     overlay.classList.add('active');
   }
-  // Bloquear main
-  const main = document.getElementById('mainContent');
-  const sidebar = document.getElementById('sidebar');
-  if (main) main.style.filter = 'blur(6px) brightness(.4)';
-  if (sidebar) sidebar.style.filter = 'blur(6px) brightness(.4)';
+  // (sin blur — el overlay cubre el fondo)
 }
 
 function hideLogin(user){const ov=document.getElementById('loginOverlay');if(ov){ov.classList.remove('active');ov.style.display='none';}const main=document.getElementById('mainContent');const sb=document.getElementById('sidebar');if(main)main.style.filter='';if(sb)sb.style.filter='';const uN=document.querySelector('.user-name'),uR=document.querySelector('.user-role'),uA=document.querySelector('.user-avatar');if(user){if(uN)uN.textContent=user.nombre;if(uR)uR.textContent=user.rol;if(uA)uA.textContent=user.nombre.slice(0,2).toUpperCase();}setTimeout(()=>{if(typeof renderNotifList==='function')renderNotifList();},1500);}

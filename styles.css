@@ -491,7 +491,7 @@ select option { background:var(--bg-card); }
 .cal-event-inspeccion   { background:rgba(234,179,8,.18);  color:var(--warning); }
 
 /* ===== Modal ===== */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:200; display:none; place-items:center; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.80); z-index:200; display:none; place-items:center; }
 .modal-overlay.active { display:grid; animation:overlayIn .2s ease; }
 @keyframes overlayIn { from{opacity:0} to{opacity:1} }
 
@@ -594,7 +594,7 @@ details.collapsible-panel .expand-icon { transition:transform .3s ease; }
 details.collapsible-panel[open] .expand-icon { transform:rotate(180deg); }
 
 /* ===== Login ===== */
-#loginOverlay { background:#09090b; }
+#loginOverlay { background:#09090b; backdrop-filter:none; -webkit-backdrop-filter:none; }
 #loginOverlay .modal { border:1px solid var(--border-strong); box-shadow:var(--shadow), 0 0 60px rgba(37,99,235,.1); }
 
 /* ===== Misc ===== */
