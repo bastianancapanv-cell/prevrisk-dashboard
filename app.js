@@ -4834,5 +4834,719 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ================================================================
+// ===== MÓDULO 2: VIGILANCIA SALUD OCUPACIONAL =====
+// ================================================================
+const SALUD_KEY = 'prevrisk_salud_ocup';
+let _saludEnfs = [], _saludHistorial = [], _saludFilter = 'todos';
+function loadSaludOcup(){ try{return JSON.parse(localStorage.getItem(SALUD_KEY))||[];}catch{return [];} }
+function saveSaludOcup2(d){ localStorage.setItem(SALUD_KEY,JSON.stringify(d)); cloudSave('store/salud_ocup',d); }
+
+function refreshSaludOcup(){
+  const data=loadSaludOcup(), today=new Date(), todayStr=today.toISOString().split('T')[0];
+  const in30=new Date(today); in30.setDate(in30.getDate()+30); const in30s=in30.toISOString().split('T')[0];
+  const q=(document.getElementById('saludSearch')?.value||'').toLowerCase();
+  const f=_saludFilter;
+  const buzos=data.filter(d=>['Buzo Básico','Supervisor de Buceo'].includes(d.cargo));
+  const porVencer=data.filter(d=>d.proxExamen&&d.proxExamen>=todayStr&&d.proxExamen<=in30s);
+  const vencidos=data.filter(d=>d.proxExamen&&d.proxExamen<todayStr);
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('saludStatTotal',data.length); s('saludStatBuzos',buzos.length);
+  s('saludStatPorVencer',porVencer.length); s('saludStatVencidos',vencidos.length);
+  let filtered=data.filter(d=>{
+    if(f==='buzos'&&!['Buzo Básico','Supervisor de Buceo'].includes(d.cargo))return false;
+    if(f==='alertas'&&!(d.proxExamen&&d.proxExamen<=in30s))return false;
+    if(q&&!`${d.nombre} ${d.cargo} ${d.embarcacion}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const tbody=document.getElementById('saludTableBody'); if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin resultados.</td></tr>`;return;}
+  const aptColors={apto:'var(--success)',apto_restricciones:'var(--warning)',no_apto:'var(--danger)',pendiente:'var(--text-muted)'};
+  const aptLabels={apto:'Apto',apto_restricciones:'Apto c/Rest.',no_apto:'No Apto',pendiente:'Pendiente'};
+  tbody.innerHTML=filtered.map(d=>{
+    const exVenc=d.proxExamen&&d.proxExamen<todayStr, exProx=d.proxExamen&&d.proxExamen<=in30s&&!exVenc;
+    const estadoHTML=exVenc?`<span class="doc-status doc-vencido">Vencido</span>`:exProx?`<span class="doc-status doc-por-vencer">Por Vencer</span>`:`<span class="doc-status doc-vigente">Vigente</span>`;
+    const hiperHTML=d.hiperUltimo?`<span style="font-size:.72rem;color:var(--success)">✓ ${formatDate(d.hiperUltimo)}</span>`:`<span style="font-size:.72rem;color:var(--text-muted)">—</span>`;
+    const enfCount=(d.enfermedades||[]).length;
+    return`<tr><td><div style="font-weight:700;font-size:.84rem">${d.nombre||'—'}</div><div style="font-size:.72rem;color:var(--text-muted)">${d.rut||''}</div></td><td style="font-size:.82rem">${d.cargo||'—'}</td><td style="font-size:.82rem">${d.embarcacion||'—'}</td><td style="font-size:.82rem">${d.ultimoExamen?formatDate(d.ultimoExamen):'—'}</td><td style="font-size:.82rem">${d.proxExamen?formatDate(d.proxExamen):'—'}</td><td>${hiperHTML}</td><td style="text-align:center"><span style="background:${enfCount>0?'rgba(239,68,68,.12)':'var(--bg-hover)'};color:${enfCount>0?'var(--danger)':'var(--text-muted)'};padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:700">${enfCount}</span></td><td>${estadoHTML}</td><td><div class="table-actions"><button onclick="openSaludModal('${d.id}')" title="Editar"><span class="material-icons-round">edit</span></button></div></td></tr>`;
+  }).join('');
+}
+function setSaludFilter(f){_saludFilter=f;document.querySelectorAll('#saludFilterGroup .filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));refreshSaludOcup();}
+function openSaludModal(id=null){
+  _saludEnfs=[]; _saludHistorial=[];
+  const ov=document.getElementById('saludModalOverlay'); if(!ov)return;
+  if(id){
+    const d=loadSaludOcup().find(i=>i.id===id); if(!d)return;
+    ['nombre','rut','cargo','embarcacion','ultimoExamen','proxExamen','centro','aptitud','restricciones','hiperUltimo','hiperProx','hiperObs'].forEach(f=>{const e=document.getElementById('salud'+f.charAt(0).toUpperCase()+f.slice(1));if(e)e.value=d[f]||'';});
+    document.getElementById('saludId').value=id;
+    _saludEnfs=(d.enfermedades||[]).map(e=>({...e}));
+    _saludHistorial=(d.historial||[]).map(h=>({...h}));
+    document.getElementById('saludBtnDelete').style.display='block';
+    document.getElementById('saludModalTitle').textContent='Editar Registro Salud';
+  }else{
+    ['saludId','saludNombre','saludRut','saludRestricciones','saludHiperObs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    ['saludUltimoExamen','saludProxExamen','saludHiperUltimo','saludHiperProx'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    const ap=document.getElementById('saludAptitud');if(ap)ap.value='apto';
+    document.getElementById('saludBtnDelete').style.display='none';
+    document.getElementById('saludModalTitle').textContent='Registro Salud Ocupacional';
+  }
+  renderSaludEnfs(); renderSaludHistorial(); ov.classList.add('active');
+}
+function closeSaludModal(){const ov=document.getElementById('saludModalOverlay');if(ov)ov.classList.remove('active');}
+function renderSaludEnfs(){
+  const c=document.getElementById('saludEnfContainer');if(!c)return;
+  if(!_saludEnfs.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Sin enfermedades profesionales registradas.</div>`;return;}
+  c.innerHTML=_saludEnfs.map((e,i)=>`<div style="display:grid;grid-template-columns:1fr 130px 130px 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.4rem"><input type="text" value="${(e.tipo||'').replace(/"/g,'&quot;')}" placeholder="Tipo enfermedad..." style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_saludEnfs[${i}].tipo=this.value"><input type="date" value="${e.fecha||''}" style="font-size:.78rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_saludEnfs[${i}].fecha=this.value"><select style="font-size:.76rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_saludEnfs[${i}].estado=this.value"><option value="evaluacion" ${e.estado==='evaluacion'?'selected':''}>En Evaluación</option><option value="reconocida" ${e.estado==='reconocida'?'selected':''}>Reconocida</option><option value="rechazada" ${e.estado==='rechazada'?'selected':''}>Rechazada</option></select><button onclick="_saludEnfs.splice(${i},1);renderSaludEnfs()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function saludAgregarEnfermedad(){_saludEnfs.push({id:genId(),tipo:'',fecha:'',estado:'evaluacion'});renderSaludEnfs();}
+function renderSaludHistorial(){
+  const c=document.getElementById('saludHistorialContainer');if(!c)return;
+  if(!_saludHistorial.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Sin entradas en el historial.</div>`;return;}
+  c.innerHTML=_saludHistorial.map((h,i)=>`<div style="display:grid;grid-template-columns:130px 1fr 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.4rem"><input type="date" value="${h.fecha||''}" style="font-size:.78rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_saludHistorial[${i}].fecha=this.value"><input type="text" value="${(h.nota||'').replace(/"/g,'&quot;')}" placeholder="Nota / evento médico laboral..." style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_saludHistorial[${i}].nota=this.value"><button onclick="_saludHistorial.splice(${i},1);renderSaludHistorial()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function saludAgregarHistorial(){_saludHistorial.push({fecha:'',nota:''});renderSaludHistorial();}
+function saveSaludOcup(){
+  const nombre=document.getElementById('saludNombre')?.value.trim();
+  if(!nombre){showToast('Ingresa el nombre del trabajador','error');return;}
+  const id=document.getElementById('saludId')?.value;
+  const data=loadSaludOcup(); const isEdit=!!id;
+  const rec={id:id||genId(),nombre,rut:document.getElementById('saludRut')?.value||'',cargo:document.getElementById('saludCargo')?.value||'',embarcacion:document.getElementById('saludEmbarcacion')?.value||'',ultimoExamen:document.getElementById('saludUltimoExamen')?.value||'',proxExamen:document.getElementById('saludProxExamen')?.value||'',centro:document.getElementById('saludCentro')?.value||'',aptitud:document.getElementById('saludAptitud')?.value||'apto',restricciones:document.getElementById('saludRestricciones')?.value||'',hiperUltimo:document.getElementById('saludHiperUltimo')?.value||'',hiperProx:document.getElementById('saludHiperProx')?.value||'',hiperObs:document.getElementById('saludHiperObs')?.value||'',enfermedades:_saludEnfs,historial:_saludHistorial,updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  saveSaludOcup2(data); addActivity(`Salud Ocupacional: <strong>${nombre}</strong>`);
+  showToast('Registro guardado ✓'); closeSaludModal(); refreshSaludOcup();
+}
+function deleteSaludOcup(){
+  const id=document.getElementById('saludId')?.value;
+  if(!id||!confirm('¿Eliminar este registro?'))return;
+  saveSaludOcup2(loadSaludOcup().filter(i=>i.id!==id));
+  showToast('Eliminado','error'); closeSaludModal(); refreshSaludOcup();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('saludModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeSaludModal();});});
+
+// ================================================================
+// ===== MÓDULO 3: PTS — PROCEDIMIENTOS DE TRABAJO SEGURO =====
+// ================================================================
+const PTS_KEY='prevrisk_pts';
+let _ptsPasos=[], _ptsFirmas=[];
+function loadPTS(){try{return JSON.parse(localStorage.getItem(PTS_KEY))||[];}catch{return[];}}
+function savePTSData(d){localStorage.setItem(PTS_KEY,JSON.stringify(d));cloudSave('store/pts',d);}
+function refreshPTS(){
+  const data=loadPTS();
+  const totalFirmas=data.reduce((s,p)=>s+(p.firmas||[]).length,0);
+  const personal=loadPersonal();
+  const ahora=new Date(); ahora.setMonth(ahora.getMonth()-3); const hace3m=ahora.toISOString().split('T')[0];
+  const sinFirma=personal.filter(p=>{const uf=data.reduce((lat,pts)=>{const f=(pts.firmas||[]).filter(fi=>fi.nombre===p.nombre);return f.length?Math.max(lat,...f.map(fi=>fi.fecha)):lat;},'');return !uf||uf<hace3m;}).length;
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('ptsStatTotal',data.length); s('ptsStatFirmas',totalFirmas); s('ptsStatSinFirma',sinFirma);
+  const tbody=document.getElementById('ptsTableBody'); if(!tbody)return;
+  if(!data.length){tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin PTS registrados. Haz clic en "Nuevo PTS".</td></tr>`;return;}
+  tbody.innerHTML=data.map(p=>`<tr><td><div style="font-weight:700;font-size:.84rem">${p.nombre||'—'}</div><div style="font-size:.72rem;color:var(--text-muted)">v${p.version||'1.0'}</div></td><td style="font-size:.82rem">${p.actividad||'—'}</td><td style="font-size:.79rem;color:var(--text-secondary)">${(p.epp||'').slice(0,60)||'—'}</td><td style="font-size:.82rem">${p.fecha?formatDate(p.fecha):'—'}</td><td><span style="background:rgba(34,197,94,.12);color:var(--success);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:700">${(p.firmas||[]).length} firmas</span></td><td><div class="table-actions"><button onclick="openPTSModal('${p.id}')" title="Editar"><span class="material-icons-round">edit</span></button><button onclick="imprimirPTS('${p.id}')" title="Imprimir"><span class="material-icons-round">print</span></button></div></td></tr>`).join('');
+}
+function openPTSModal(id=null){
+  _ptsPasos=[]; _ptsFirmas=[];
+  const ov=document.getElementById('ptsModalOverlay'); if(!ov)return;
+  if(id){
+    const p=loadPTS().find(i=>i.id===id); if(!p)return;
+    ['nombre','actividad','version','epp','objetivo','alcance','riesgos','medidas'].forEach(f=>{const e=document.getElementById('pts'+f.charAt(0).toUpperCase()+f.slice(1));if(e)e.value=p[f]||'';});
+    document.getElementById('ptsFecha').value=p.fecha||'';
+    document.getElementById('ptsId').value=id;
+    _ptsPasos=(p.pasos||[]).map(x=>({...x}));
+    _ptsFirmas=(p.firmas||[]).map(x=>({...x}));
+    document.getElementById('ptsBtnDelete').style.display='block';
+    document.getElementById('ptsModalTitle').textContent='Editar PTS';
+  }else{
+    ['ptsId','ptsNombre','ptsActividad','ptsEPP','ptsObjetivo','ptsAlcance','ptsRiesgos','ptsMedidas'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('ptsFecha').value=new Date().toISOString().split('T')[0];
+    document.getElementById('ptsVersion').value='v1.0';
+    document.getElementById('ptsBtnDelete').style.display='none';
+    document.getElementById('ptsModalTitle').textContent='Nuevo PTS';
+  }
+  renderPtsPasos(); renderPtsFirmas(); ov.classList.add('active');
+}
+function closePTSModal(){const ov=document.getElementById('ptsModalOverlay');if(ov)ov.classList.remove('active');}
+function renderPtsPasos(){
+  const c=document.getElementById('ptsPasosContainer');if(!c)return;
+  if(!_ptsPasos.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Agrega los pasos del procedimiento.</div>`;return;}
+  c.innerHTML=_ptsPasos.map((p,i)=>`<div style="display:grid;grid-template-columns:28px 1fr 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.35rem"><span style="font-weight:900;color:var(--accent);font-size:.8rem;text-align:center">${i+1}</span><input type="text" value="${(p.desc||'').replace(/"/g,'&quot;')}" placeholder="Descripción del paso..." style="font-size:.81rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_ptsPasos[${i}].desc=this.value"><button onclick="_ptsPasos.splice(${i},1);renderPtsPasos()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function ptsAgregarPaso(){_ptsPasos.push({desc:''});renderPtsPasos();}
+function renderPtsFirmas(){
+  const c=document.getElementById('ptsFirmasContainer');if(!c)return;
+  if(!_ptsFirmas.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Sin firmas registradas.</div>`;return;}
+  c.innerHTML=_ptsFirmas.map((f,i)=>`<div style="display:grid;grid-template-columns:1fr 100px 100px 130px 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.35rem"><input type="text" value="${(f.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre trabajador" style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_ptsFirmas[${i}].nombre=this.value"><input type="text" value="${(f.rut||'').replace(/"/g,'&quot;')}" placeholder="RUT" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_ptsFirmas[${i}].rut=this.value"><input type="text" value="${(f.cargo||'').replace(/"/g,'&quot;')}" placeholder="Cargo" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_ptsFirmas[${i}].cargo=this.value"><input type="date" value="${f.fecha||''}" style="font-size:.78rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_ptsFirmas[${i}].fecha=this.value"><button onclick="_ptsFirmas.splice(${i},1);renderPtsFirmas()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function ptsAgregarFirma(){_ptsFirmas.push({nombre:'',rut:'',cargo:'',fecha:new Date().toISOString().split('T')[0]});renderPtsFirmas();}
+function savePTS(){
+  const nombre=document.getElementById('ptsNombre')?.value.trim();
+  if(!nombre){showToast('Ingresa el nombre del PTS','error');return;}
+  const id=document.getElementById('ptsId')?.value; const data=loadPTS(); const isEdit=!!id;
+  const rec={id:id||genId(),nombre,actividad:document.getElementById('ptsActividad')?.value||'',version:document.getElementById('ptsVersion')?.value||'v1.0',fecha:document.getElementById('ptsFecha')?.value||'',objetivo:document.getElementById('ptsObjetivo')?.value||'',alcance:document.getElementById('ptsAlcance')?.value||'',epp:document.getElementById('ptsEPP')?.value||'',riesgos:document.getElementById('ptsRiesgos')?.value||'',medidas:document.getElementById('ptsMedidas')?.value||'',pasos:_ptsPasos,firmas:_ptsFirmas,updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  savePTSData(data); addActivity(`PTS ${isEdit?'actualizado':'registrado'}: <strong>${nombre}</strong>`);
+  showToast(`PTS ${isEdit?'actualizado':'guardado'} ✓`); closePTSModal(); refreshPTS();
+}
+function deletePTS(){
+  const id=document.getElementById('ptsId')?.value;
+  if(!id||!confirm('¿Eliminar este PTS?'))return;
+  savePTSData(loadPTS().filter(i=>i.id!==id));
+  showToast('PTS eliminado','error'); closePTSModal(); refreshPTS();
+}
+function imprimirPTS(id){
+  const p=loadPTS().find(i=>i.id===id); if(!p)return;
+  const hoy=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>PTS — ${p.nombre}</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.1rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.6rem}.box{background:#f5f3ff;border-left:4px solid #8b5cf6;border-radius:8px;padding:.85rem 1rem;margin-bottom:.5rem;font-size:.85rem;line-height:1.55}ol li{margin-bottom:.4rem;font-size:.85rem}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.5rem .7rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.45rem .7rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>${p.nombre}</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Versión: <strong>${p.version||'v1.0'}</strong></div><div>Fecha: <strong>${p.fecha?formatDate(p.fecha):hoy}</strong></div><div>Actividad: <strong>${p.actividad||'—'}</strong></div></div></div>
+  <div class="sec"><div class="sec-t">Objetivo</div><p style="font-size:.86rem;line-height:1.6;margin:0">${p.objetivo||'No definido.'}</p></div>
+  <div class="sec"><div class="sec-t">Alcance</div><p style="font-size:.86rem;line-height:1.6;margin:0">${p.alcance||'No definido.'}</p></div>
+  <div class="sec"><div class="sec-t">EPP Requerido</div><div class="box" style="background:#f0fdf4;border-color:#22c55e">${p.epp||'No especificado.'}</div></div>
+  <div class="sec"><div class="sec-t">Riesgos Asociados</div><div class="box" style="background:#fef2f2;border-color:#ef4444">${p.riesgos||'No especificados.'}</div></div>
+  <div class="sec"><div class="sec-t">Medidas de Control</div><div class="box">${p.medidas||'No especificadas.'}</div></div>
+  ${(p.pasos||[]).length?`<div class="sec"><div class="sec-t">Paso a Paso</div><ol>${(p.pasos||[]).map(s=>`<li>${s.desc||''}</li>`).join('')}</ol></div>`:''}
+  ${(p.firmas||[]).length?`<div class="sec"><div class="sec-t">Registro de Lecturas y Firmas</div><table><thead><tr><th>#</th><th>Trabajador</th><th>RUT</th><th>Cargo</th><th>Fecha</th></tr></thead><tbody>${(p.firmas||[]).map((f,i)=>`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td>${i+1}</td><td>${f.nombre||'—'}</td><td>${f.rut||'—'}</td><td>${f.cargo||'—'}</td><td>${f.fecha?formatDate(f.fecha):'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
+  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);}
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('ptsModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closePTSModal();});});
+
+// ================================================================
+// ===== MÓDULO 4: PLANES DE EMERGENCIA =====
+// ================================================================
+const PLAN_EMERG_KEY='prevrisk_planes_emerg';
+let _planEmergRoles=[], _planEmergEmbFilter='todas';
+function loadPlanesEmerg(){try{return JSON.parse(localStorage.getItem(PLAN_EMERG_KEY))||[];}catch{return[];}}
+function savePlanesEmerg(d){localStorage.setItem(PLAN_EMERG_KEY,JSON.stringify(d));cloudSave('store/planes_emerg',d);}
+const EMERG_TIPOS={abandono_nave:{label:'Abandono de Nave',icon:'directions_boat',color:'var(--danger)'},hombre_agua:{label:'Hombre al Agua',icon:'pool',color:'var(--info)'},incendio:{label:'Incendio a Bordo',icon:'local_fire_department',color:'var(--warning)'},varada:{label:'Varada',icon:'anchor',color:'var(--accent)'},otro:{label:'Otro',icon:'sos',color:'var(--text-muted)'}};
+function refreshPlanEmerg(){
+  const data=loadPlanesEmerg(); const f=_planEmergEmbFilter;
+  const grid=document.getElementById('planEmergGrid');if(!grid)return;
+  const filtered=f==='todas'?data:data.filter(p=>p.embarcacion===f);
+  if(!filtered.length){grid.innerHTML=`<div style="text-align:center;padding:3rem;color:var(--text-muted);grid-column:1/-1">No hay planes de emergencia. Haz clic en "Nuevo Plan".</div>`;return;}
+  grid.innerHTML=filtered.map(p=>{
+    const t=EMERG_TIPOS[p.tipo]||EMERG_TIPOS.otro;
+    const rolesCount=(p.roles||[]).length;
+    return`<div class="panel" style="cursor:pointer" onclick="openPlanEmergModal('${p.id}')"><div class="panel-header" style="gap:.6rem"><span class="material-icons-round" style="color:${t.color};font-size:1.2rem">${t.icon}</span><div style="flex:1"><div style="font-weight:700;font-size:.88rem">${p.embarcacion||'—'}</div><div style="font-size:.72rem;color:var(--text-muted)">${t.label}</div></div><span class="material-icons-round" style="color:var(--text-muted);font-size:1rem">chevron_right</span></div><div class="panel-body"><p style="font-size:.8rem;color:var(--text-secondary);margin:0 0 .6rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.procedimiento||'Sin procedimiento registrado.'}</p><div style="display:flex;gap:.5rem;flex-wrap:wrap"><span style="background:var(--bg-hover);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;color:var(--text-secondary);font-weight:600"><span class="material-icons-round" style="font-size:.75rem;vertical-align:middle">group</span> ${rolesCount} roles</span>${p.puntoEncuentro?`<span style="background:var(--bg-hover);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;color:var(--text-secondary);font-weight:600"><span class="material-icons-round" style="font-size:.75rem;vertical-align:middle">place</span> ${p.puntoEncuentro.slice(0,30)}</span>`:''}</div></div></div>`;
+  }).join('');
+}
+function setPlanEmergEmb(emb){
+  _planEmergEmbFilter=emb;
+  document.querySelectorAll('#planEmergTabs .filter-btn').forEach(b=>b.classList.toggle('active',b.textContent.trim()===(emb==='todas'?'Todas':emb)));
+  refreshPlanEmerg();
+}
+function openPlanEmergModal(id=null){
+  _planEmergRoles=[];
+  const ov=document.getElementById('planEmergModalOverlay');if(!ov)return;
+  if(id){
+    const p=loadPlanesEmerg().find(i=>i.id===id);if(!p)return;
+    document.getElementById('planEmergEmb').value=p.embarcacion||'';
+    document.getElementById('planEmergTipo').value=p.tipo||'abandono_nave';
+    document.getElementById('planEmergProcedimiento').value=p.procedimiento||'';
+    document.getElementById('planEmergPunto').value=p.puntoEncuentro||'';
+    document.getElementById('planEmergEquipos').value=p.equipos||'';
+    document.getElementById('planEmergComun').value=p.comunicaciones||'';
+    document.getElementById('planEmergId').value=id;
+    _planEmergRoles=(p.roles||[]).map(r=>({...r}));
+    document.getElementById('planEmergBtnDelete').style.display='block';
+    document.getElementById('planEmergModalTitle').textContent='Editar Plan de Emergencia';
+  }else{
+    ['planEmergId','planEmergProcedimiento','planEmergPunto','planEmergEquipos','planEmergComun'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('planEmergBtnDelete').style.display='none';
+    document.getElementById('planEmergModalTitle').textContent='Nuevo Plan de Emergencia';
+  }
+  renderPlanEmergRoles(); ov.classList.add('active');
+}
+function closePlanEmergModal(){const ov=document.getElementById('planEmergModalOverlay');if(ov)ov.classList.remove('active');}
+function renderPlanEmergRoles(){
+  const c=document.getElementById('planEmergRolesContainer');if(!c)return;
+  if(!_planEmergRoles.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Sin roles asignados.</div>`;return;}
+  c.innerHTML=_planEmergRoles.map((r,i)=>`<div style="display:grid;grid-template-columns:1fr 1fr 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.35rem"><input type="text" value="${(r.cargo||'').replace(/"/g,'&quot;')}" placeholder="Cargo (Ej: Patrón)" style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_planEmergRoles[${i}].cargo=this.value"><input type="text" value="${(r.responsabilidad||'').replace(/"/g,'&quot;')}" placeholder="Responsabilidad en emergencia" style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_planEmergRoles[${i}].responsabilidad=this.value"><button onclick="_planEmergRoles.splice(${i},1);renderPlanEmergRoles()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function planEmergAgregarRol(){_planEmergRoles.push({cargo:'',responsabilidad:''});renderPlanEmergRoles();}
+function savePlanEmerg(){
+  const emb=document.getElementById('planEmergEmb')?.value;
+  if(!emb){showToast('Selecciona una embarcación','error');return;}
+  const id=document.getElementById('planEmergId')?.value; const data=loadPlanesEmerg(); const isEdit=!!id;
+  const rec={id:id||genId(),embarcacion:emb,tipo:document.getElementById('planEmergTipo')?.value||'abandono_nave',procedimiento:document.getElementById('planEmergProcedimiento')?.value||'',puntoEncuentro:document.getElementById('planEmergPunto')?.value||'',equipos:document.getElementById('planEmergEquipos')?.value||'',comunicaciones:document.getElementById('planEmergComun')?.value||'',roles:_planEmergRoles,updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  savePlanesEmerg(data); addActivity(`Plan emergencia: <strong>${emb} — ${EMERG_TIPOS[rec.tipo]?.label||rec.tipo}</strong>`);
+  showToast('Plan guardado ✓'); closePlanEmergModal(); refreshPlanEmerg();
+}
+function deletePlanEmerg(){
+  const id=document.getElementById('planEmergId')?.value;
+  if(!id||!confirm('¿Eliminar este plan?'))return;
+  savePlanesEmerg(loadPlanesEmerg().filter(i=>i.id!==id));
+  showToast('Plan eliminado','error'); closePlanEmergModal(); refreshPlanEmerg();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('planEmergModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closePlanEmergModal();});});
+
+// ================================================================
+// ===== MÓDULO 5: CONTROL DE EQUIPOS Y COMPRESORES =====
+// ================================================================
+const EQ_KEY='prevrisk_equipos';
+let _eqFilter='todos';
+function loadEquipos(){try{return JSON.parse(localStorage.getItem(EQ_KEY))||[];}catch{return[];}}
+function saveEquipos(d){localStorage.setItem(EQ_KEY,JSON.stringify(d));cloudSave('store/equipos',d);}
+function refreshEquipos(){
+  const data=loadEquipos(); const today=new Date().toISOString().split('T')[0];
+  const in30=new Date(); in30.setDate(in30.getDate()+30); const in30s=in30.toISOString().split('T')[0];
+  const q=(document.getElementById('eqSearch')?.value||'').toLowerCase();
+  const f=_eqFilter;
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('eqStatTotal',data.length);
+  s('eqStatOperativos',data.filter(d=>d.estado==='operativo').length);
+  s('eqStatPorMant',data.filter(d=>d.proxMant&&d.proxMant>=today&&d.proxMant<=in30s).length);
+  s('eqStatFuera',data.filter(d=>d.estado==='fuera_servicio').length);
+  let filtered=data.filter(d=>{
+    if(f!=='todos'&&d.tipo!==f)return false;
+    if(q&&!`${d.nombre} ${d.marca} ${d.serie} ${d.embarcacion}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const tbody=document.getElementById('equiposTableBody');if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin equipos.</td></tr>`;return;}
+  const tipoLabels={compresor_buceo:'Compresor Buceo',izaje:'Izaje',herr_electrica:'Herr. Eléctrica',nautico:'Náutico',otro:'Otro'};
+  const estColors={operativo:{bg:'rgba(34,197,94,.12)',c:'var(--success)',l:'Operativo'},en_mant:{bg:'rgba(56,189,248,.12)',c:'var(--info)',l:'En Mantención'},fuera_servicio:{bg:'rgba(239,68,68,.12)',c:'var(--danger)',l:'Fuera de Servicio'}};
+  tbody.innerHTML=filtered.map(d=>{
+    const ec=estColors[d.estado]||estColors.operativo;
+    const mantVenc=d.proxMant&&d.proxMant<today, mantProx=d.proxMant&&d.proxMant>=today&&d.proxMant<=in30s;
+    const mantHTML=mantVenc?`<span style="color:var(--danger);font-size:.82rem;font-weight:700">${formatDate(d.proxMant)} ⚠</span>`:mantProx?`<span style="color:var(--warning);font-size:.82rem;font-weight:700">${formatDate(d.proxMant)}</span>`:d.proxMant?`<span style="font-size:.82rem">${formatDate(d.proxMant)}</span>`:`<span style="color:var(--text-muted)">—</span>`;
+    return`<tr><td><div style="font-weight:700;font-size:.84rem">${d.nombre||'—'}</div><div style="font-size:.72rem;color:var(--text-muted)">${d.marca||''} ${d.serie?'· '+d.serie:''}</div></td><td><span style="background:var(--bg-hover);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:600;color:var(--text-secondary)">${tipoLabels[d.tipo]||d.tipo}</span></td><td style="font-size:.82rem">${d.embarcacion||'—'}</td><td style="font-size:.82rem">${d.ultMant?formatDate(d.ultMant):'—'}</td><td>${mantHTML}</td><td style="font-size:.82rem">${d.ultCalib?formatDate(d.ultCalib):'—'}</td><td><span style="background:${ec.bg};color:${ec.c};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${ec.l}</span></td><td><div class="table-actions"><button onclick="openEquipoModal('${d.id}')" title="Editar"><span class="material-icons-round">edit</span></button></div></td></tr>`;
+  }).join('');
+}
+function setEqFilter(f){_eqFilter=f;document.querySelectorAll('#eqFilterGroup .filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));refreshEquipos();}
+function openEquipoModal(id=null){
+  const ov=document.getElementById('equipoModalOverlay');if(!ov)return;
+  if(id){
+    const d=loadEquipos().find(i=>i.id===id);if(!d)return;
+    ['nombre','tipo','marca','serie','embarcacion','estado','obs'].forEach(f=>{const e=document.getElementById('equipo'+f.charAt(0).toUpperCase()+f.slice(1));if(e)e.value=d[f]||'';});
+    document.getElementById('equipoUltMant').value=d.ultMant||'';
+    document.getElementById('equipoProxMant').value=d.proxMant||'';
+    document.getElementById('equipoUltCalib').value=d.ultCalib||'';
+    document.getElementById('equipoId').value=id;
+    document.getElementById('equipoBtnDelete').style.display='block';
+    document.getElementById('equipoModalTitle').textContent='Editar Equipo';
+  }else{
+    ['equipoId','equipoNombre','equipoMarca','equipoSerie','equipoObs','equipoUltMant','equipoProxMant','equipoUltCalib'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('equipoBtnDelete').style.display='none';
+    document.getElementById('equipoModalTitle').textContent='Nuevo Equipo';
+  }
+  ov.classList.add('active');
+}
+function closeEquipoModal(){const ov=document.getElementById('equipoModalOverlay');if(ov)ov.classList.remove('active');}
+function saveEquipo(){
+  const nombre=document.getElementById('equipoNombre')?.value.trim();
+  if(!nombre){showToast('Ingresa el nombre del equipo','error');return;}
+  const id=document.getElementById('equipoId')?.value; const data=loadEquipos(); const isEdit=!!id;
+  const rec={id:id||genId(),nombre,tipo:document.getElementById('equipoTipo')?.value||'otro',marca:document.getElementById('equipoMarca')?.value||'',serie:document.getElementById('equipoSerie')?.value||'',embarcacion:document.getElementById('equipoEmbarcacion')?.value||'',ultMant:document.getElementById('equipoUltMant')?.value||'',proxMant:document.getElementById('equipoProxMant')?.value||'',ultCalib:document.getElementById('equipoUltCalib')?.value||'',estado:document.getElementById('equipoEstado')?.value||'operativo',obs:document.getElementById('equipoObs')?.value||'',updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  saveEquipos(data); addActivity(`Equipo ${isEdit?'actualizado':'registrado'}: <strong>${nombre}</strong>`);
+  showToast(`Equipo ${isEdit?'actualizado':'guardado'} ✓`); closeEquipoModal(); refreshEquipos();
+}
+function deleteEquipo(){
+  const id=document.getElementById('equipoId')?.value;
+  if(!id||!confirm('¿Eliminar este equipo?'))return;
+  saveEquipos(loadEquipos().filter(i=>i.id!==id));
+  showToast('Equipo eliminado','error'); closeEquipoModal(); refreshEquipos();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('equipoModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeEquipoModal();});});
+
+// ================================================================
+// ===== MÓDULO 6: INSPECCIONES MEJORADAS =====
+// ================================================================
+const INSP_V2_KEY='prevrisk_inspecciones_v2';
+let _inspV2Hallazgos=[], _inspV2Filter='todas';
+function loadInspeccionesV2(){try{return JSON.parse(localStorage.getItem(INSP_V2_KEY))||[];}catch{return[];}}
+function saveInspeccionesV2(d){localStorage.setItem(INSP_V2_KEY,JSON.stringify(d));cloudSave('store/inspecciones_v2',d);}
+function refreshInspeccionesV2(){
+  const data=loadInspeccionesV2(); const f=_inspV2Filter;
+  const criticos=data.reduce((s,i)=>s+(i.hallazgos||[]).filter(h=>h.clasificacion==='critico'&&h.estado!=='cerrado').length,0);
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('inspStatTotal',data.length);
+  s('inspStatCriticos',criticos);
+  s('inspStatEnProceso',data.filter(d=>d.estado==='en_proceso').length);
+  s('inspStatCerradas',data.filter(d=>d.estado==='cerrada').length);
+  let filtered=data.filter(d=>f==='todas'||d.estado===f);
+  const tbody=document.getElementById('inspTableBody');if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin resultados.</td></tr>`;return;}
+  const ec={abierta:{bg:'rgba(239,68,68,.12)',c:'var(--danger)',l:'Abierta'},en_proceso:{bg:'rgba(56,189,248,.12)',c:'var(--info)',l:'En Proceso'},cerrada:{bg:'rgba(34,197,94,.12)',c:'var(--success)',l:'Cerrada'}};
+  tbody.innerHTML=filtered.map(d=>{
+    const e=ec[d.estado]||ec.abierta;
+    const criticos=(d.hallazgos||[]).filter(h=>h.clasificacion==='critico').length;
+    const total=(d.hallazgos||[]).length;
+    return`<tr><td style="font-size:.82rem">${d.fecha?formatDate(d.fecha):'—'}</td><td style="font-weight:700;font-size:.84rem">${d.embarcacion||'—'}</td><td style="font-size:.82rem">${d.inspector||'—'}</td><td><span style="background:var(--bg-hover);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:600">${total} hallazgo(s)</span></td><td>${criticos>0?`<span style="background:rgba(239,68,68,.12);color:var(--danger);padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${criticos} crítico(s)</span>`:`<span style="color:var(--text-muted);font-size:.8rem">—</span>`}</td><td><span style="background:${e.bg};color:${e.c};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${e.l}</span></td><td><div class="table-actions"><button onclick="openInspeccionV2Modal('${d.id}')" title="Editar"><span class="material-icons-round">edit</span></button></div></td></tr>`;
+  }).join('');
+}
+function setInspFilter(f){_inspV2Filter=f;document.querySelectorAll('#inspFilterGroup .filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));refreshInspeccionesV2();}
+function openInspeccionV2Modal(id=null){
+  _inspV2Hallazgos=[];
+  const ov=document.getElementById('inspeccionV2ModalOverlay');if(!ov)return;
+  if(id){
+    const d=loadInspeccionesV2().find(i=>i.id===id);if(!d)return;
+    document.getElementById('inspV2Fecha').value=d.fecha||'';
+    document.getElementById('inspV2Emb').value=d.embarcacion||'';
+    document.getElementById('inspV2Inspector').value=d.inspector||'Bastian Ancapán Vera';
+    document.getElementById('inspV2Estado').value=d.estado||'abierta';
+    document.getElementById('inspV2Obs').value=d.obs||'';
+    document.getElementById('inspV2Id').value=id;
+    _inspV2Hallazgos=(d.hallazgos||[]).map(h=>({...h}));
+    document.getElementById('inspV2BtnDelete').style.display='block';
+    document.getElementById('inspeccionV2Title').textContent='Editar Inspección';
+  }else{
+    ['inspV2Id','inspV2Obs'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('inspV2Fecha').value=new Date().toISOString().split('T')[0];
+    document.getElementById('inspV2Inspector').value='Bastian Ancapán Vera';
+    document.getElementById('inspV2Estado').value='abierta';
+    document.getElementById('inspV2BtnDelete').style.display='none';
+    document.getElementById('inspeccionV2Title').textContent='Nueva Inspección';
+  }
+  renderInspV2Hallazgos(); ov.classList.add('active');
+}
+function closeInspeccionV2Modal(){const ov=document.getElementById('inspeccionV2ModalOverlay');if(ov)ov.classList.remove('active');}
+function renderInspV2Hallazgos(){
+  const c=document.getElementById('inspV2HallazgosContainer');if(!c)return;
+  if(!_inspV2Hallazgos.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Agrega hallazgos encontrados.</div>`;return;}
+  const clasColors={critico:{c:'var(--danger)',bg:'rgba(239,68,68,.12)'},mayor:{c:'var(--warning)',bg:'rgba(234,179,8,.12)'},menor:{c:'var(--info)',bg:'rgba(56,189,248,.12)'},observacion:{c:'var(--text-secondary)',bg:'var(--bg-hover)'}};
+  c.innerHTML=_inspV2Hallazgos.map((h,i)=>`<div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.6rem .75rem;border:1px solid var(--border);margin-bottom:.5rem"><div style="display:grid;grid-template-columns:1fr 110px 110px 100px 30px;gap:.4rem;align-items:center;margin-bottom:.35rem"><input type="text" value="${(h.desc||'').replace(/"/g,'&quot;')}" placeholder="Descripción del hallazgo..." style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_inspV2Hallazgos[${i}].desc=this.value"><select style="font-size:.75rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_inspV2Hallazgos[${i}].clasificacion=this.value"><option value="critico" ${h.clasificacion==='critico'?'selected':''}>Crítico</option><option value="mayor" ${h.clasificacion==='mayor'?'selected':''}>Mayor</option><option value="menor" ${h.clasificacion==='menor'?'selected':''}>Menor</option><option value="observacion" ${h.clasificacion==='observacion'?'selected':''}>Observación</option></select><input type="text" value="${(h.responsable||'').replace(/"/g,'&quot;')}" placeholder="Responsable" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_inspV2Hallazgos[${i}].responsable=this.value"><select style="font-size:.75rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px" onchange="_inspV2Hallazgos[${i}].estado=this.value"><option value="abierto" ${h.estado==='abierto'?'selected':''}>Abierto</option><option value="en_proceso" ${h.estado==='en_proceso'?'selected':''}>En Proceso</option><option value="cerrado" ${h.estado==='cerrado'?'selected':''}>Cerrado</option></select><button onclick="_inspV2Hallazgos.splice(${i},1);renderInspV2Hallazgos()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div><div style="display:flex;gap:.4rem;align-items:center"><span style="font-size:.7rem;color:var(--text-muted)">Plazo:</span><input type="date" value="${h.plazo||''}" style="font-size:.77rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.15rem .3rem;border-radius:5px" onchange="_inspV2Hallazgos[${i}].plazo=this.value"><span style="font-size:.7rem;color:var(--text-muted)">Foto/Link:</span><input type="text" value="${(h.fotoUrl||'').replace(/"/g,'&quot;')}" placeholder="Link Google Drive foto..." style="flex:1;font-size:.77rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.15rem .4rem;border-radius:5px" onchange="_inspV2Hallazgos[${i}].fotoUrl=this.value"></div></div>`).join('');
+}
+function inspV2AgregarHallazgo(){_inspV2Hallazgos.push({id:genId(),desc:'',clasificacion:'menor',responsable:'',estado:'abierto',plazo:'',fotoUrl:''});renderInspV2Hallazgos();}
+function saveInspeccionV2(){
+  const emb=document.getElementById('inspV2Emb')?.value;
+  if(!emb){showToast('Selecciona una embarcación','error');return;}
+  const id=document.getElementById('inspV2Id')?.value; const data=loadInspeccionesV2(); const isEdit=!!id;
+  const rec={id:id||genId(),fecha:document.getElementById('inspV2Fecha')?.value||'',embarcacion:emb,inspector:document.getElementById('inspV2Inspector')?.value||'',estado:document.getElementById('inspV2Estado')?.value||'abierta',obs:document.getElementById('inspV2Obs')?.value||'',hallazgos:_inspV2Hallazgos,updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  saveInspeccionesV2(data); addActivity(`Inspección ${isEdit?'actualizada':'registrada'}: <strong>${emb}</strong> — ${(rec.hallazgos||[]).length} hallazgos`);
+  showToast(`Inspección ${isEdit?'actualizada':'guardada'} ✓`); closeInspeccionV2Modal(); refreshInspeccionesV2();
+}
+function deleteInspeccionV2(){
+  const id=document.getElementById('inspV2Id')?.value;
+  if(!id||!confirm('¿Eliminar esta inspección?'))return;
+  saveInspeccionesV2(loadInspeccionesV2().filter(i=>i.id!==id));
+  showToast('Inspección eliminada','error'); closeInspeccionV2Modal(); refreshInspeccionesV2();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('inspeccionV2ModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeInspeccionV2Modal();});});
+
+// ================================================================
+// ===== MÓDULO 7: ESTADÍSTICAS DE ACCIDENTABILIDAD =====
+// ================================================================
+const HHT_KEY='prevrisk_hht';
+let accStatChart2=null;
+function loadHHT(){try{return JSON.parse(localStorage.getItem(HHT_KEY))||{};}catch{return {};}}
+function saveHHT2(d){localStorage.setItem(HHT_KEY,JSON.stringify(d));cloudSave('store/hht',d);}
+
+function refreshEstadisticasAcc(){
+  const accs=loadAccidentes(); const hhtData=loadHHT();
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const year=new Date().getFullYear();
+  let totalHHT=0, totalAcc=0, totalDias=0, ultimoAccFecha='';
+  const filas=meses.map((mes,mi)=>{
+    const key=`${year}-${String(mi+1).padStart(2,'0')}`;
+    const hht=parseInt(hhtData[key])||0;
+    const accMes=accs.filter(a=>{if(!a.fecha)return false;const d=new Date(a.fecha);return d.getFullYear()===year&&d.getMonth()===mi;});
+    const nAcc=accMes.length;
+    const dias=accMes.reduce((s,a)=>s+(parseInt(a.reposo)||0),0);
+    const tf=hht>0?((nAcc*1000000)/hht).toFixed(1):'—';
+    const tg=hht>0?((dias*1000000)/hht).toFixed(1):'—';
+    const ta=hht>0?((nAcc*200000)/hht).toFixed(2):'—';
+    totalHHT+=hht; totalAcc+=nAcc; totalDias+=dias;
+    if(nAcc>0){const fechas=accMes.map(a=>a.fecha).sort();ultimoAccFecha=fechas[fechas.length-1]||ultimoAccFecha;}
+    return{mes,nAcc,dias,hht,tf,tg,ta};
+  });
+  const tfTotal=totalHHT>0?((totalAcc*1000000)/totalHHT).toFixed(1):'—';
+  const tgTotal=totalHHT>0?((totalDias*1000000)/totalHHT).toFixed(1):'—';
+  const taTotal=totalHHT>0?((totalAcc*200000)/totalHHT).toFixed(2):'—';
+  const diasSin=ultimoAccFecha?Math.max(0,Math.floor((new Date()-new Date(ultimoAccFecha))/(1000*60*60*24))):365;
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('accStatTF',tfTotal); s('accStatTG',tgTotal); s('accStatTA',taTotal); s('accStatDiasSin',diasSin); s('accStatHHT',totalHHT.toLocaleString('es-CL')); s('accStatYear',year);
+  const tbody=document.getElementById('accStatTableBody');
+  if(tbody)tbody.innerHTML=filas.map(f=>`<tr><td style="font-weight:600">${f.mes}</td><td style="text-align:center;font-weight:700;color:${f.nAcc>0?'var(--danger)':'var(--text)'}">${f.nAcc}</td><td style="text-align:center">${f.dias}</td><td style="text-align:center">${f.hht.toLocaleString('es-CL')}</td><td style="text-align:center;color:${f.tf!=='—'&&parseFloat(f.tf)>0?'var(--warning)':'var(--text-muted)'}">${f.tf}</td><td style="text-align:center;color:${f.tg!=='—'&&parseFloat(f.tg)>0?'var(--warning)':'var(--text-muted)'}">${f.tg}</td><td style="text-align:center">${f.ta}</td></tr>`).join('');
+  const ctx=document.getElementById('accStatChart');
+  if(ctx&&window.Chart){
+    if(accStatChart2)accStatChart2.destroy();
+    accStatChart2=new Chart(ctx,{type:'bar',data:{labels:meses,datasets:[{label:'N° Accidentes',data:filas.map(f=>f.nAcc),backgroundColor:'rgba(239,68,68,.7)',borderRadius:4},{label:'Días Perdidos',data:filas.map(f=>f.dias),backgroundColor:'rgba(234,179,8,.5)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#71717a',font:{size:11}}}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,color:'#71717a'},grid:{color:'rgba(255,255,255,.04)'}},x:{ticks:{color:'#71717a'},grid:{display:false}}}}});
+  }
+}
+function openHHTModal(){
+  const hhtData=loadHHT(); const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const year=new Date().getFullYear();
+  const grid=document.getElementById('hhtInputsGrid');
+  if(grid)grid.innerHTML=meses.map((m,i)=>{const key=`${year}-${String(i+1).padStart(2,'0')}`;return`<div class="form-group"><label>${m} ${year}</label><input type="number" id="hht_${key}" min="0" value="${hhtData[key]||0}" placeholder="0" oninput="window._hhtTemp=window._hhtTemp||{};window._hhtTemp['${key}']=parseInt(this.value)||0"></div>`;}).join('');
+  window._hhtTemp={...hhtData};
+  document.getElementById('hhtModalOverlay')?.classList.add('active');
+}
+function closeHHTModal(){document.getElementById('hhtModalOverlay')?.classList.remove('active');}
+function saveHHT(){
+  const hhtData=loadHHT(); const year=new Date().getFullYear();
+  for(let i=1;i<=12;i++){const key=`${year}-${String(i).padStart(2,'0')}`;const el=document.getElementById(`hht_${key}`);if(el)hhtData[key]=parseInt(el.value)||0;}
+  saveHHT2(hhtData); showToast('HHT guardado ✓'); closeHHTModal(); refreshEstadisticasAcc();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('hhtModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeHHTModal();});});
+
+// ================================================================
+// ===== MÓDULO 8: KPI DASHBOARD DE SEGURIDAD =====
+// ================================================================
+function refreshKPIDashboard(){
+  const grid=document.getElementById('kpiGrid');if(!grid)return;
+  const today=new Date().toISOString().split('T')[0];
+  const in30=new Date();in30.setDate(in30.getDate()+30);const in30s=in30.toISOString().split('T')[0];
+  const items=loadItems(); const accs=loadAccidentes(); const exts=loadExtintores(); const epps=loadEPP();
+  const docs=typeof loadDocControl==='function'?loadDocControl():[];
+  const caps=typeof loadCapRegistros==='function'?loadCapRegistros():[];
+  const thisMonthAcc=accs.filter(a=>{if(!a.fecha)return false;const d=new Date(a.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length;
+  const ultimoAcc=accs.map(a=>a.fecha).filter(Boolean).sort().pop()||'';
+  const diasSin=ultimoAcc?Math.max(0,Math.floor((new Date()-new Date(ultimoAcc))/(1000*60*60*24))):365;
+  const totalItems=items.length; const compItems=items.filter(i=>i.status==='completada').length;
+  const pctPrograma=totalItems>0?Math.round(compItems/totalItems*100):100;
+  const extTotal=exts.filter(e=>e.estado!=='dado_baja').length; const extOk=exts.filter(e=>e.estado==='operativo').length;
+  const pctExt=extTotal>0?Math.round(extOk/extTotal*100):100;
+  const eppTotal=epps.length; const eppVig=epps.filter(e=>e.estado==='vigente'||(!e.vencimiento)).length;
+  const pctEPP=eppTotal>0?Math.round(eppVig/eppTotal*100):100;
+  const docVig=docs.filter(d=>d._estado==='vigente').length; const pctDoc=docs.length>0?Math.round(docVig/docs.length*100):100;
+  const insp=typeof loadInspeccionesV2==='function'?loadInspeccionesV2():[];
+  const inspMes=insp.filter(i=>{if(!i.fecha)return false;const d=new Date(i.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length;
+  const kpis=[
+    {label:'Prog. Preventivo',value:pctPrograma+'%',icon:'task_alt',semaforo:pctPrograma>=80?'green':pctPrograma>=50?'yellow':'red',desc:`${compItems}/${totalItems} completadas`},
+    {label:'Acc. este Mes',value:thisMonthAcc,icon:'local_hospital',semaforo:thisMonthAcc===0?'green':thisMonthAcc<=2?'yellow':'red',desc:thisMonthAcc===0?'Sin accidentes':'Con accidentes'},
+    {label:'Días sin Acc.',value:diasSin,icon:'event_available',semaforo:diasSin>=30?'green':diasSin>=7?'yellow':'red',desc:`Último: ${ultimoAcc?formatDate(ultimoAcc):'Ninguno'}`},
+    {label:'Extintores Op.',value:pctExt+'%',icon:'fire_extinguisher',semaforo:pctExt>=90?'green':pctExt>=70?'yellow':'red',desc:`${extOk}/${extTotal} operativos`},
+    {label:'EPP Vigentes',value:pctEPP+'%',icon:'security',semaforo:pctEPP>=90?'green':pctEPP>=70?'yellow':'red',desc:`${eppVig}/${eppTotal} vigentes`},
+    {label:'Docs Vigentes',value:pctDoc+'%',icon:'manage_search',semaforo:pctDoc>=90?'green':pctDoc>=70?'yellow':'red',desc:`${docVig}/${docs.length} vigentes`},
+    {label:'Insp. este Mes',value:inspMes,icon:'search',semaforo:inspMes>=2?'green':inspMes>=1?'yellow':'red',desc:inspMes===0?'Sin inspecciones':'Realizadas'},
+    {label:'Caps. este Mes',value:caps.filter(c=>{if(!c.fecha)return false;const d=new Date(c.fecha);const n=new Date();return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).length,icon:'school',semaforo:'green',desc:'Capacitaciones'},
+  ];
+  const sColor={green:'var(--success)',yellow:'var(--warning)',red:'var(--danger)'};
+  const sBg={green:'rgba(34,197,94,.12)',yellow:'rgba(234,179,8,.12)',red:'rgba(239,68,68,.12)'};
+  grid.innerHTML=kpis.map(k=>`<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem;display:flex;align-items:center;gap:.75rem;transition:var(--transition)" onmouseenter="this.style.borderColor='${sColor[k.semaforo]}'" onmouseleave="this.style.borderColor='var(--border)'"><div style="width:40px;height:40px;border-radius:10px;background:${sBg[k.semaforo]};display:grid;place-items:center;flex-shrink:0"><span class="material-icons-round" style="color:${sColor[k.semaforo]};font-size:1.2rem">${k.icon}</span></div><div style="flex:1;min-width:0"><div style="font-size:1.35rem;font-weight:900;color:${sColor[k.semaforo]};line-height:1.1">${k.value}</div><div style="font-size:.72rem;font-weight:700;color:var(--text-secondary);margin-top:.08rem">${k.label}</div><div style="font-size:.67rem;color:var(--text-muted);margin-top:.05rem">${k.desc}</div></div><div style="width:10px;height:10px;border-radius:50%;background:${sColor[k.semaforo]};box-shadow:0 0 8px ${sColor[k.semaforo]};flex-shrink:0"></div></div>`).join('');
+}
+
+// ================================================================
+// ===== MÓDULO 9: CONTROL DE DOCUMENTOS =====
+// ================================================================
+const DOC_CTRL_KEY='prevrisk_doc_control';
+let _docCtrlFilter='todos';
+function loadDocControl(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(DOC_CTRL_KEY))||[];
+    const today=new Date().toISOString().split('T')[0];
+    const in30=new Date();in30.setDate(in30.getDate()+30);const in30s=in30.toISOString().split('T')[0];
+    return raw.map(d=>{
+      const e=d.revision&&d.revision<today?'vencido':d.revision&&d.revision<=in30s?'por_revisar':'vigente';
+      return{...d,_estado:e};
+    });
+  }catch{return[];}
+}
+function saveDocControl2(d){localStorage.setItem(DOC_CTRL_KEY,JSON.stringify(d));cloudSave('store/doc_control',d);}
+function refreshDocControl(){
+  const data=loadDocControl();
+  const q=(document.getElementById('docControlSearch')?.value||'').toLowerCase();
+  const f=_docCtrlFilter;
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('docStatTotal',data.length);
+  s('docStatVigentes',data.filter(d=>d._estado==='vigente').length);
+  s('docStatPorRevisar',data.filter(d=>d._estado==='por_revisar').length);
+  s('docStatVencidos',data.filter(d=>d._estado==='vencido').length);
+  let filtered=data.filter(d=>{
+    if(f!=='todos'&&d._estado!==f)return false;
+    if(q&&!`${d.nombre} ${d.tipo} ${d.responsable}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const tbody=document.getElementById('docControlTableBody');if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin documentos.</td></tr>`;return;}
+  const ec={vigente:'doc-vigente',por_revisar:'doc-por-vencer',vencido:'doc-vencido'};
+  const el={vigente:'Vigente',por_revisar:'Por Revisar',vencido:'Vencido'};
+  const tipoL={reglamento:'Reglamento',procedimiento:'Procedimiento',instruccion:'Instrucción',certificacion:'Certificación',contrato:'Contrato',protocolo:'Protocolo',otro:'Otro'};
+  tbody.innerHTML=filtered.map(d=>`<tr><td><div style="font-weight:700;font-size:.84rem">${d.nombre||'—'}</div>${d.desc?`<div style="font-size:.72rem;color:var(--text-muted)">${d.desc.slice(0,50)}</div>`:''}</td><td style="font-size:.82rem">${tipoL[d.tipo]||d.tipo||'—'}</td><td style="text-align:center;font-family:monospace;font-weight:700;font-size:.82rem">${d.version||'—'}</td><td style="font-size:.82rem">${d.emision?formatDate(d.emision):'—'}</td><td style="font-size:.82rem">${d.revision?formatDate(d.revision):'—'}</td><td style="font-size:.82rem">${d.responsable||'—'}</td><td><span class="doc-status ${ec[d._estado]||'doc-sin-venc'}">${el[d._estado]||'—'}</span></td><td><div class="table-actions">${d.link?`<a href="${d.link}" target="_blank" class="table-actions" style="color:var(--accent)"><span class="material-icons-round">open_in_new</span></a>`:''}<button onclick="openDocControlModal('${d.id}')" title="Editar"><span class="material-icons-round">edit</span></button></div></td></tr>`).join('');
+}
+function setDocControlFilter(f){_docCtrlFilter=f;document.querySelectorAll('#docControlFilterGroup .filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));refreshDocControl();}
+function openDocControlModal(id=null){
+  const ov=document.getElementById('docControlModalOverlay');if(!ov)return;
+  if(id){
+    const d=loadDocControl().find(i=>i.id===id);if(!d)return;
+    ['nombre','tipo','version','emision','revision','responsable','link','desc'].forEach(f=>{const e=document.getElementById('docControl'+f.charAt(0).toUpperCase()+f.slice(1));if(e)e.value=d[f]||'';});
+    document.getElementById('docControlId').value=id;
+    document.getElementById('docControlBtnDelete').style.display='block';
+    document.getElementById('docControlModalTitle').textContent='Editar Documento';
+  }else{
+    ['docControlId','docControlNombre','docControlLink','docControlDesc','docControlEmision','docControlRevision'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('docControlVersion').value='v1.0';
+    document.getElementById('docControlResponsable').value='Bastian Ancapán Vera';
+    document.getElementById('docControlBtnDelete').style.display='none';
+    document.getElementById('docControlModalTitle').textContent='Nuevo Documento';
+  }
+  ov.classList.add('active');
+}
+function closeDocControlModal(){document.getElementById('docControlModalOverlay')?.classList.remove('active');}
+function saveDocControl(){
+  const nombre=document.getElementById('docControlNombre')?.value.trim();
+  if(!nombre){showToast('Ingresa el nombre del documento','error');return;}
+  const id=document.getElementById('docControlId')?.value; const data=loadDocControl(); const isEdit=!!id;
+  const rec={id:id||genId(),nombre,tipo:document.getElementById('docControlTipo')?.value||'otro',version:document.getElementById('docControlVersion')?.value||'v1.0',emision:document.getElementById('docControlEmision')?.value||'',revision:document.getElementById('docControlRevision')?.value||'',responsable:document.getElementById('docControlResponsable')?.value||'',link:document.getElementById('docControlLink')?.value||'',desc:document.getElementById('docControlDesc')?.value||'',updatedAt:new Date().toISOString()};
+  const cleanData=data.map(d=>{const{_estado,...rest}=d;return rest;});
+  if(isEdit){const idx=cleanData.findIndex(i=>i.id===id);if(idx!==-1)cleanData[idx]=rec;else cleanData.push(rec);}else cleanData.push(rec);
+  saveDocControl2(cleanData); addActivity(`Documento ${isEdit?'actualizado':'registrado'}: <strong>${nombre}</strong>`);
+  showToast(`Documento ${isEdit?'actualizado':'guardado'} ✓`); closeDocControlModal(); refreshDocControl();
+}
+function deleteDocControl(){
+  const id=document.getElementById('docControlId')?.value;
+  if(!id||!confirm('¿Eliminar este documento?'))return;
+  const data=loadDocControl().map(d=>{const{_estado,...r}=d;return r;}).filter(i=>i.id!==id);
+  saveDocControl2(data); showToast('Documento eliminado','error'); closeDocControlModal(); refreshDocControl();
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('docControlModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeDocControlModal();});});
+
+// ================================================================
+// ===== MÓDULO 10: REGISTRO DE CAPACITACIONES =====
+// ================================================================
+const CAP_REG_KEY='prevrisk_cap_registro';
+let _capAsistentes=[], _capFilter='todos';
+function loadCapRegistros(){try{return JSON.parse(localStorage.getItem(CAP_REG_KEY))||[];}catch{return[];}}
+function saveCapRegistros(d){localStorage.setItem(CAP_REG_KEY,JSON.stringify(d));cloudSave('store/cap_registro',d);}
+function refreshCapRegistro(){
+  const data=loadCapRegistros(); const personal=loadPersonal();
+  const q=(document.getElementById('capSearch')?.value||'').toLowerCase(); const f=_capFilter;
+  const totalAsistentes=data.reduce((s,c)=>s+(c.asistentes||[]).length,0);
+  const hace3m=new Date(); hace3m.setMonth(hace3m.getMonth()-3); const hace3ms=hace3m.toISOString().split('T')[0];
+  const sin3meses=personal.filter(p=>{const caps=data.filter(c=>(c.asistentes||[]).some(a=>a.nombre===p.nombre));if(!caps.length)return true;const ultima=caps.map(c=>c.fecha).filter(Boolean).sort().pop()||'';return ultima<hace3ms;}).length;
+  const planAnual=loadItems().filter(i=>i.category==='capacitacion').length;
+  const realizadas=data.length; const pct=planAnual>0?Math.min(100,Math.round(realizadas/planAnual*100)):realizadas>0?100:0;
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('capStatTotal',data.length); s('capStatAsistentes',totalAsistentes); s('capStatSin3Meses',sin3meses); s('capStatCumplimiento',pct+'%');
+  let filtered=data.filter(d=>{
+    if(f!=='todos'&&d.categoria!==f)return false;
+    if(q&&!`${d.tema} ${d.relator} ${d.lugar}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const tbody=document.getElementById('capTableBody');if(!tbody)return;
+  if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin capacitaciones registradas.</td></tr>`;return;}
+  const catL={buceo:'Buceo',emergencias:'Emergencias',legal:'Legal/SST',epp:'EPP',otro:'Otro'};
+  const catC={buceo:'rgba(56,189,248,.12)',emergencias:'rgba(239,68,68,.12)',legal:'rgba(139,92,246,.12)',epp:'rgba(234,179,8,.12)',otro:'var(--bg-hover)'};
+  const catT={buceo:'var(--info)',emergencias:'var(--danger)',legal:'var(--accent-light)',epp:'var(--warning)',otro:'var(--text-muted)'};
+  tbody.innerHTML=filtered.map(c=>`<tr><td><div style="font-weight:700;font-size:.84rem">${c.tema||'—'}</div>${c.desc?`<div style="font-size:.72rem;color:var(--text-muted)">${c.desc.slice(0,50)}</div>`:''}</td><td><span style="background:${catC[c.categoria]||'var(--bg-hover)'};color:${catT[c.categoria]||'var(--text-muted)'};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${catL[c.categoria]||c.categoria}</span></td><td style="font-size:.82rem">${c.fecha?formatDate(c.fecha):'—'}</td><td style="font-size:.82rem">${c.relator||'—'}</td><td><span style="background:rgba(34,197,94,.12);color:var(--success);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:700">${(c.asistentes||[]).length} personas</span></td><td style="font-size:.82rem">${c.duracion||'—'} hrs</td><td><div class="table-actions"><button onclick="openCapRegistroModal('${c.id}')" title="Editar"><span class="material-icons-round">edit</span></button><button onclick="imprimirCapRegistro('${c.id}')" title="Imprimir lista"><span class="material-icons-round">print</span></button></div></td></tr>`).join('');
+  const cargos=['Buzo Básico','Supervisor de Buceo','Patrón de Nave','Tripulante','Motorista','Cocinero','Operario'];
+  const cumGrid=document.getElementById('capCumplimientoGrid');
+  if(cumGrid){
+    const hace12m=new Date();hace12m.setFullYear(hace12m.getFullYear()-1);const hace12s=hace12m.toISOString().split('T')[0];
+    cumGrid.innerHTML=cargos.map(cargo=>{
+      const trabajadores=personal.filter(p=>p.cargo===cargo);if(!trabajadores.length)return'';
+      const conCap=trabajadores.filter(p=>data.some(c=>c.fecha&&c.fecha>=hace12s&&(c.asistentes||[]).some(a=>a.nombre===p.nombre))).length;
+      const pct=trabajadores.length>0?Math.round(conCap/trabajadores.length*100):0;
+      const color=pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)';
+      return`<div class="cat-bar-item"><label>${cargo}<span style="color:${color};font-weight:700">${pct}% (${conCap}/${trabajadores.length})</span></label><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+    }).join('');
+  }
+}
+function setCapFilter(f){_capFilter=f;document.querySelectorAll('#capFilterGroup .filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));refreshCapRegistro();}
+function openCapRegistroModal(id=null){
+  _capAsistentes=[];
+  const ov=document.getElementById('capRegistroModalOverlay');if(!ov)return;
+  if(id){
+    const c=loadCapRegistros().find(i=>i.id===id);if(!c)return;
+    ['tema','categoria','relator','lugar','desc'].forEach(f=>{const e=document.getElementById('cap'+f.charAt(0).toUpperCase()+f.slice(1));if(e)e.value=c[f]||'';});
+    document.getElementById('capFecha').value=c.fecha||'';
+    document.getElementById('capDuracion').value=c.duracion||2;
+    document.getElementById('capRegistroId').value=id;
+    _capAsistentes=(c.asistentes||[]).map(a=>({...a}));
+    document.getElementById('capRegistroBtnDelete').style.display='block';
+    document.getElementById('capRegistroModalTitle').textContent='Editar Capacitación';
+  }else{
+    ['capRegistroId','capTema','capRelator','capLugar','capDesc'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+    document.getElementById('capFecha').value=new Date().toISOString().split('T')[0];
+    document.getElementById('capDuracion').value=2;
+    document.getElementById('capRegistroBtnDelete').style.display='none';
+    document.getElementById('capRegistroModalTitle').textContent='Registrar Capacitación';
+  }
+  renderCapAsistentes(); ov.classList.add('active');
+}
+function closeCapRegistroModal(){document.getElementById('capRegistroModalOverlay')?.classList.remove('active');}
+function renderCapAsistentes(){
+  const c=document.getElementById('capAsistentesContainer');if(!c)return;
+  if(!_capAsistentes.length){c.innerHTML=`<div style="text-align:center;padding:.75rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Agrega los asistentes.</div>`;return;}
+  c.innerHTML=_capAsistentes.map((a,i)=>`<div style="display:grid;grid-template-columns:1fr 100px 120px 90px 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.5rem .7rem;border:1px solid var(--border);margin-bottom:.35rem"><input type="text" value="${(a.nombre||'').replace(/"/g,'&quot;')}" placeholder="Nombre completo" style="font-size:.8rem;border:none;background:transparent;color:var(--text);padding:0" oninput="_capAsistentes[${i}].nombre=this.value"><input type="text" value="${(a.rut||'').replace(/"/g,'&quot;')}" placeholder="RUT" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_capAsistentes[${i}].rut=this.value"><input type="text" value="${(a.cargo||'').replace(/"/g,'&quot;')}" placeholder="Cargo" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_capAsistentes[${i}].cargo=this.value"><input type="text" value="${(a.firma||'').replace(/"/g,'&quot;')}" placeholder="Firma/Sello" style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center" oninput="_capAsistentes[${i}].firma=this.value"><button onclick="_capAsistentes.splice(${i},1);renderCapAsistentes()" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center"><span class="material-icons-round" style="font-size:.82rem">close</span></button></div>`).join('');
+}
+function capAgregarAsistente(){_capAsistentes.push({nombre:'',rut:'',cargo:'',firma:''});renderCapAsistentes();}
+function saveCapRegistro(){
+  const tema=document.getElementById('capTema')?.value.trim();
+  if(!tema){showToast('Ingresa el tema de la capacitación','error');return;}
+  const id=document.getElementById('capRegistroId')?.value; const data=loadCapRegistros(); const isEdit=!!id;
+  const rec={id:id||genId(),tema,categoria:document.getElementById('capCategoria')?.value||'otro',fecha:document.getElementById('capFecha')?.value||'',duracion:parseInt(document.getElementById('capDuracion')?.value)||0,relator:document.getElementById('capRelator')?.value||'',lugar:document.getElementById('capLugar')?.value||'',desc:document.getElementById('capDesc')?.value||'',asistentes:_capAsistentes,updatedAt:new Date().toISOString()};
+  if(isEdit){const idx=data.findIndex(i=>i.id===id);if(idx!==-1)data[idx]=rec;else data.push(rec);}else data.push(rec);
+  saveCapRegistros(data); addActivity(`Capacitación ${isEdit?'actualizada':'registrada'}: <strong>${tema}</strong> — ${rec.asistentes.length} asistentes`);
+  showToast(`Capacitación ${isEdit?'actualizada':'guardada'} ✓`); closeCapRegistroModal(); refreshCapRegistro();
+}
+function deleteCapRegistro(){
+  const id=document.getElementById('capRegistroId')?.value;
+  if(!id||!confirm('¿Eliminar esta capacitación?'))return;
+  saveCapRegistros(loadCapRegistros().filter(i=>i.id!==id));
+  showToast('Capacitación eliminada','error'); closeCapRegistroModal(); refreshCapRegistro();
+}
+function imprimirCapRegistro(id){
+  const c=loadCapRegistros().find(i=>i.id===id);if(!c)return;
+  const hoy=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Registro Capacitación</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.2rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.info-box{background:#f5f3ff;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1.3rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;font-size:.83rem}.il{font-size:.68rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.iv{font-weight:700;margin-top:.1rem}table{width:100%;border-collapse:collapse;font-size:.82rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.sign-row td{height:50px;border-bottom:1px solid #ccc}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Capacitación</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Folio: CAP-${c.id.slice(-6).toUpperCase()}</div><div>Fecha Impresión: ${hoy}</div></div></div>
+  <div class="info-box"><div><div class="il">Tema</div><div class="iv">${c.tema||'—'}</div></div><div><div class="il">Fecha</div><div class="iv">${c.fecha?formatDate(c.fecha):'—'}</div></div><div><div class="il">Duración</div><div class="iv">${c.duracion||0} horas</div></div><div><div class="il">Relator</div><div class="iv">${c.relator||'—'}</div></div><div><div class="il">Lugar</div><div class="iv">${c.lugar||'—'}</div></div><div><div class="il">N° Asistentes</div><div class="iv">${(c.asistentes||[]).length}</div></div></div>
+  ${c.desc?`<p style="font-size:.84rem;margin-bottom:1.2rem;line-height:1.55">${c.desc}</p>`:''}
+  <table><thead><tr><th>#</th><th>Nombre Completo</th><th>RUT</th><th>Cargo</th><th>Firma</th></tr></thead>
+  <tbody class="sign-row">${(c.asistentes||[]).map((a,i)=>`<tr class="sign-row"><td style="font-weight:700;color:#999">${i+1}</td><td>${a.nombre||''}</td><td>${a.rut||''}</td><td>${a.cargo||''}</td><td style="min-width:120px">${a.firma||''}</td></tr>`).join('')}</tbody></table>
+  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
+  const win=window.open('','_blank','width=900,height=700');
+  if(win){win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);}
+}
+document.addEventListener('DOMContentLoaded',()=>{const ov=document.getElementById('capRegistroModalOverlay');if(ov)ov.addEventListener('click',e=>{if(e.target===ov)closeCapRegistroModal();});});
+
+// ================================================================
+// ===== ACTUALIZAR refreshAll CON TODOS LOS MÓDULOS =====
+// ================================================================
+const _baseRefreshAll=refreshAll;
+refreshAll=function(){
+  _baseRefreshAll.apply(this,arguments);
+  const active=id=>document.getElementById(id)?.classList.contains('active');
+  if(active('view-salud-ocup'))refreshSaludOcup();
+  if(active('view-pts'))refreshPTS();
+  if(active('view-plan-emerg'))refreshPlanEmerg();
+  if(active('view-equipos'))refreshEquipos();
+  if(active('view-inspecciones-v2'))refreshInspeccionesV2();
+  if(active('view-estadisticas-acc'))refreshEstadisticasAcc();
+  if(active('view-doc-control'))refreshDocControl();
+  if(active('view-cap-registro'))refreshCapRegistro();
+  if(document.getElementById('kpiGrid'))refreshKPIDashboard();
+};
+
+// ================================================================
+// ===== ALERTAS INTEGRADAS MÓDULOS 2-10 =====
+// ================================================================
+const _origRenderNotif_all=renderNotifList;
+renderNotifList=function(){
+  _origRenderNotif_all.apply(this,arguments);
+  const list=document.getElementById('notifList'),badge=document.getElementById('notifBadge');
+  if(!list)return;
+  const today=new Date().toISOString().split('T')[0];
+  const in30=new Date();in30.setDate(in30.getDate()+30);const in30s=in30.toISOString().split('T')[0];
+  const alerts2=[];
+  // Salud Ocupacional: exámenes vencidos
+  const saludVenc=loadSaludOcup().filter(d=>d.proxExamen&&d.proxExamen<today);
+  if(saludVenc.length)alerts2.push({icon:'monitor_heart',color:'var(--danger)',title:`${saludVenc.length} examen(es) ocupacional(es) vencido(s)`,desc:saludVenc.slice(0,2).map(d=>d.nombre).join(', ')});
+  // Equipos: mantención vencida
+  const eqVenc=loadEquipos().filter(e=>e.proxMant&&e.proxMant<today&&e.estado!=='fuera_servicio');
+  if(eqVenc.length)alerts2.push({icon:'build',color:'var(--warning)',title:`${eqVenc.length} equipo(s) con mantención vencida`,desc:eqVenc.slice(0,2).map(e=>e.nombre).join(', ')});
+  // Documentos por revisar
+  const docCtrl=loadDocControl().filter(d=>d._estado==='vencido');
+  if(docCtrl.length)alerts2.push({icon:'manage_search',color:'var(--danger)',title:`${docCtrl.length} documento(s) de control vencido(s)`,desc:docCtrl.slice(0,2).map(d=>d.nombre).join(', ')});
+  // Sin capacitación 3 meses
+  const personal2=loadPersonal();const capData=loadCapRegistros();
+  const hace3m=new Date();hace3m.setMonth(hace3m.getMonth()-3);const hace3s=hace3m.toISOString().split('T')[0];
+  const sinCap=personal2.filter(p=>{const caps=capData.filter(c=>(c.asistentes||[]).some(a=>a.nombre===p.nombre));if(!caps.length)return true;const ultima=caps.map(c=>c.fecha).filter(Boolean).sort().pop()||'';return ultima<hace3s;});
+  if(sinCap.length)alerts2.push({icon:'school',color:'var(--warning)',title:`${sinCap.length} trabajador(es) sin capacitación (3+ meses)`,desc:sinCap.slice(0,2).map(p=>p.nombre).join(', ')});
+  // Inspecciones con hallazgos críticos abiertos
+  const inspCrit=loadInspeccionesV2().filter(i=>i.estado!=='cerrada'&&(i.hallazgos||[]).some(h=>h.clasificacion==='critico'&&h.estado!=='cerrado'));
+  if(inspCrit.length)alerts2.push({icon:'dangerous',color:'var(--danger)',title:`${inspCrit.length} inspección(es) con hallazgos críticos abiertos`,desc:inspCrit.slice(0,2).map(i=>i.embarcacion).join(', ')});
+  alerts2.forEach(a=>{
+    const entry=document.createElement('div');
+    entry.style.cssText='padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;align-items:flex-start;';
+    entry.innerHTML=`<span class="material-icons-round" style="color:${a.color};font-size:1.2rem;flex-shrink:0;">${a.icon}</span><div><div style="font-size:.82rem;font-weight:700;">${a.title}</div><div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${a.desc}</div></div>`;
+    list.appendChild(entry);
+    if(badge)badge.style.display='block';
+  });
+};
+
+// ================================================================
 function initNotificationBell(){const btn=document.getElementById('btnNotifBell'),dd=document.getElementById('notifDropdown');if(!btn||!dd)return;btn.addEventListener('click',e=>{e.stopPropagation();dd.style.display=dd.style.display==='block'?'none':'block';if(dd.style.display==='block')renderNotifList();});document.addEventListener('click',e=>{if(!btn.contains(e.target)&&!dd.contains(e.target))dd.style.display='none';});}
 function renderNotifList(){const list=document.getElementById('notifList'),badge=document.getElementById('notifBadge');if(!list)return;const today=new Date(),items=loadItems(),files=loadFilesMeta(),personal=loadPersonal(),alerts=[];const od=items.filter(i=>i.status!=='completada'&&i.dueDate&&new Date(i.dueDate)<today);if(od.length)alerts.push({icon:'warning',color:'var(--danger)',title:od.length+' tarea(s) vencidas',desc:od.slice(0,2).map(i=>i.title).join(', ')});const s30=new Date(today);s30.setDate(s30.getDate()+30);const ef=files.filter(f=>f.vencimiento&&new Date(f.vencimiento)>=today&&new Date(f.vencimiento)<=s30);if(ef.length)alerts.push({icon:'event_upcoming',color:'var(--warning)',title:ef.length+' documento(s) por vencer',desc:'Próximos 30 días'});const ep=personal.filter(p=>(p.vencExamen&&new Date(p.vencExamen)<today)||(p.vencMatricula&&new Date(p.vencMatricula)<today));if(ep.length)alerts.push({icon:'badge',color:'var(--warning)',title:ep.length+' trabajador(es) con docs vencidos',desc:ep.slice(0,2).map(p=>p.nombre).join(', ')});if(badge)badge.style.display=alerts.length?'block':'none';if(!alerts.length){list.innerHTML='<div style="padding:2rem 1.2rem;text-align:center;color:var(--text-muted);font-size:.85rem;">Sin alertas activas</div>';return;}list.innerHTML=alerts.map(a=>`<div style="padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;align-items:flex-start;"><span class="material-icons-round" style="color:${a.color};font-size:1.2rem;flex-shrink:0;">${a.icon}</span><div><div style="font-size:.82rem;font-weight:700;">${a.title}</div><div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${a.desc}</div></div></div>`).join('');}

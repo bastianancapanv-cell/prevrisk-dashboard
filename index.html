@@ -93,6 +93,8 @@
                     <a href="#" class="nav-sub-item" data-view="sst-carta-gantt">Carta Gantt</a>
                     <a href="#" class="nav-sub-item" data-view="sst-apr">APR / Encargado PRL</a>
                     <a href="#" class="nav-sub-item" data-view="sst-delegados">Delegados SST</a>
+                    <a href="#" class="nav-sub-item" data-view="inspecciones-v2">Inspecciones Plus</a>
+                    <a href="#" class="nav-sub-item" data-view="cap-registro">Registro Capacitaciones</a>
                 </div>
             </div>
             <div class="nav-group">
@@ -153,6 +155,7 @@
                     <a href="#" class="nav-sub-item" data-view="acc-procedimiento">Proc. ante Accidente</a>
                     <a href="#" class="nav-sub-item" data-view="acc-caso-gomez">Caso Juan Gómez</a>
                     <a href="#" class="nav-sub-item" data-view="investigacion">Investigación Acc.</a>
+                    <a href="#" class="nav-sub-item" data-view="estadisticas-acc">Estadísticas Accid.</a>
                 </div>
             </div>
 
@@ -169,6 +172,8 @@
                     <a href="#" class="nav-sub-item" data-view="emb-aukan">Aukan <span class="nav-badge nav-badge-ok">Activa</span></a>
                     <a href="#" class="nav-sub-item" data-view="emb-don-humberto">Don Humberto <span class="nav-badge nav-badge-warn">Parada</span></a>
                     <a href="#" class="nav-sub-item" data-view="emb-lafquen">Lafquen <span class="nav-badge nav-badge-warn">Parada</span></a>
+                    <a href="#" class="nav-sub-item" data-view="equipos">Equipos y Compresores</a>
+                    <a href="#" class="nav-sub-item" data-view="plan-emerg">Planes de Emergencia</a>
                 </div>
             </div>
 
@@ -217,8 +222,8 @@
                     <span class="material-icons-round nav-chevron">expand_more</span>
                 </div>
                 <div class="nav-group-items" id="navGroupPTS">
-                    <a href="#" class="nav-sub-item" data-view="pts-list">Ver Todos</a>
-                    <a href="#" class="nav-sub-item" data-view="pts-banos">PTS Baños</a>
+                    <a href="#" class="nav-sub-item" data-view="pts">Módulo PTS</a>
+                    <a href="#" class="nav-sub-item" data-view="pts-banos">PTS Baños de Peces</a>
                     <a href="#" class="nav-sub-item" data-view="pts-tensores">PTS Tensores</a>
                 </div>
             </div>
@@ -233,6 +238,14 @@
             <a href="#" class="nav-item" data-view="epp">
                 <span class="material-icons-round">security</span>
                 <span class="nav-label">Certificaciones EPP</span>
+            </a>
+            <a href="#" class="nav-item" data-view="salud-ocup">
+                <span class="material-icons-round">monitor_heart</span>
+                <span class="nav-label">Salud Ocupacional</span>
+            </a>
+            <a href="#" class="nav-item" data-view="doc-control">
+                <span class="material-icons-round">manage_search</span>
+                <span class="nav-label">Control Documentos</span>
             </a>
 
         </nav>
@@ -425,6 +438,15 @@
                         <div class="activity-timeline" id="activityTimeline"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- ===== MÓDULO 8: KPI DASHBOARD DE SEGURIDAD ===== -->
+            <div style="margin-top:1.5rem">
+              <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+                <h3 style="font-size:1rem;font-weight:800;letter-spacing:-.2px">KPI Seguridad</h3>
+                <span style="font-size:.72rem;color:var(--text-muted);font-weight:600">Panel semáforo — se actualiza automáticamente</span>
+              </div>
+              <div id="kpiGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem"></div>
             </div>
         </section>
 
@@ -1717,6 +1739,293 @@
 
 
 
+    <!-- ========================================================
+         MÓDULO 2: VIGILANCIA SALUD OCUPACIONAL
+         ======================================================== -->
+    <section class="view" id="view-salud-ocup">
+      <div class="view-header">
+        <div><h2>Vigilancia Salud Ocupacional</h2><p class="view-subtitle">Historial médico laboral, hiperbaria y enfermedades profesionales</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('salud-ocup')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-primary" onclick="openSaludModal()"><span class="material-icons-round">add</span><span>Nuevo Registro</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">monitor_heart</span></div><div class="stat-info"><span class="stat-value" id="saludStatTotal">0</span><span class="stat-label">Trabajadores Registrados</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">scuba_diving</span></div><div class="stat-info"><span class="stat-value" id="saludStatBuzos">0</span><span class="stat-label">Buzos con Control Hiperbárico</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">warning_amber</span></div><div class="stat-info"><span class="stat-value" id="saludStatPorVencer">0</span><span class="stat-label">Exámenes por Vencer (30 días)</span></div></div>
+        <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">event_busy</span></div><div class="stat-info"><span class="stat-value" id="saludStatVencidos">0</span><span class="stat-label">Exámenes Vencidos</span></div></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="filter-group" id="saludFilterGroup">
+          <button class="filter-btn active" data-filter="todos" onclick="setSaludFilter('todos')">Todos</button>
+          <button class="filter-btn" data-filter="buzos" onclick="setSaludFilter('buzos')">Solo Buzos</button>
+          <button class="filter-btn" data-filter="alertas" onclick="setSaludFilter('alertas')">Con Alertas</button>
+        </div>
+        <div style="flex:1;max-width:320px;display:flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 .75rem">
+          <span class="material-icons-round" style="color:var(--text-muted);font-size:1.1rem">search</span>
+          <input type="text" id="saludSearch" placeholder="Buscar trabajador..." style="border:none;background:none;padding:.55rem 0;font-size:.84rem;width:100%" oninput="refreshSaludOcup()">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Trabajador</th><th>Cargo</th><th>Embarcación</th><th>Último Examen</th><th>Próx. Examen</th><th>Hiperbaria</th><th>Enf. Prof.</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="saludTableBody"><tr><td colspan="9" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay registros de salud ocupacional.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 3: PTS — PROCEDIMIENTOS DE TRABAJO SEGURO
+         ======================================================== -->
+    <section class="view" id="view-pts">
+      <div class="view-header">
+        <div><h2>Procedimientos de Trabajo Seguro (PTS)</h2><p class="view-subtitle">Registro de PTS, lecturas y firmas — Comercial Lafquen Ltda.</p></div>
+        <div class="view-actions">
+          <button class="btn-primary" onclick="openPTSModal()"><span class="material-icons-round">add</span><span>Nuevo PTS</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">engineering</span></div><div class="stat-info"><span class="stat-value" id="ptsStatTotal">0</span><span class="stat-label">Total PTS</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">how_to_reg</span></div><div class="stat-info"><span class="stat-value" id="ptsStatFirmas">0</span><span class="stat-label">Firmas Registradas</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">pending</span></div><div class="stat-info"><span class="stat-value" id="ptsStatSinFirma">0</span><span class="stat-label">Trabajadores sin firma reciente</span></div></div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Nombre del PTS</th><th>Actividad</th><th>EPP Requerido</th><th>Última Actualización</th><th>Firmas</th><th>Acciones</th></tr></thead>
+          <tbody id="ptsTableBody"><tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay PTS registrados.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 4: PLANES DE EMERGENCIA POR EMBARCACIÓN
+         ======================================================== -->
+    <section class="view" id="view-plan-emerg">
+      <div class="view-header">
+        <div><h2>Planes de Emergencia por Embarcación</h2><p class="view-subtitle">Roles, procedimientos y equipos de emergencia — Flota Comercial Lafquen</p></div>
+        <div class="view-actions">
+          <button class="btn-primary" onclick="openPlanEmergModal()"><span class="material-icons-round">add</span><span>Nuevo Plan</span></button>
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap" id="planEmergTabs">
+        <button class="filter-btn active" onclick="setPlanEmergEmb('todas')">Todas</button>
+        <button class="filter-btn" onclick="setPlanEmergEmb('María José')">María José</button>
+        <button class="filter-btn" onclick="setPlanEmergEmb('Alvarito')">Alvarito</button>
+        <button class="filter-btn" onclick="setPlanEmergEmb('Aukan')">Aukan</button>
+        <button class="filter-btn" onclick="setPlanEmergEmb('Don Humberto')">Don Humberto</button>
+        <button class="filter-btn" onclick="setPlanEmergEmb('Lafquen')">Lafquen</button>
+      </div>
+      <div id="planEmergGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem">
+        <div style="text-align:center;padding:3rem;color:var(--text-muted);grid-column:1/-1">No hay planes registrados.</div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 5: CONTROL DE EQUIPOS Y COMPRESORES
+         ======================================================== -->
+    <section class="view" id="view-equipos">
+      <div class="view-header">
+        <div><h2>Control de Equipos y Compresores</h2><p class="view-subtitle">Mantención, calibración y estado operativo de equipos de buceo y a bordo</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('equipos')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-primary" onclick="openEquipoModal()"><span class="material-icons-round">add</span><span>Nuevo Equipo</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">build</span></div><div class="stat-info"><span class="stat-value" id="eqStatTotal">0</span><span class="stat-label">Total Equipos</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">check_circle</span></div><div class="stat-info"><span class="stat-value" id="eqStatOperativos">0</span><span class="stat-label">Operativos</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">schedule</span></div><div class="stat-info"><span class="stat-value" id="eqStatPorMant">0</span><span class="stat-label">Por Mantener (30 días)</span></div></div>
+        <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">cancel</span></div><div class="stat-info"><span class="stat-value" id="eqStatFuera">0</span><span class="stat-label">Fuera de Servicio</span></div></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="filter-group" id="eqFilterGroup">
+          <button class="filter-btn active" data-filter="todos" onclick="setEqFilter('todos')">Todos</button>
+          <button class="filter-btn" data-filter="compresor_buceo" onclick="setEqFilter('compresor_buceo')">Compresores</button>
+          <button class="filter-btn" data-filter="izaje" onclick="setEqFilter('izaje')">Izaje</button>
+          <button class="filter-btn" data-filter="herr_electrica" onclick="setEqFilter('herr_electrica')">Herr. Eléctricas</button>
+        </div>
+        <div style="flex:1;max-width:320px;display:flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 .75rem">
+          <span class="material-icons-round" style="color:var(--text-muted);font-size:1.1rem">search</span>
+          <input type="text" id="eqSearch" placeholder="Buscar equipo..." style="border:none;background:none;padding:.55rem 0;font-size:.84rem;width:100%" oninput="refreshEquipos()">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Nombre / Modelo</th><th>Tipo</th><th>Embarcación</th><th>Últ. Mantención</th><th>Próx. Mantención</th><th>Últ. Calibración</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="equiposTableBody"><tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay equipos registrados.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 6: INSPECCIONES MEJORADAS
+         ======================================================== -->
+    <section class="view" id="view-inspecciones-v2">
+      <div class="view-header">
+        <div><h2>Inspecciones de Seguridad</h2><p class="view-subtitle">Hallazgos clasificados, seguimiento y cierre por embarcación</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('inspecciones-v2')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-primary" onclick="openInspeccionV2Modal()"><span class="material-icons-round">add</span><span>Nueva Inspección</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-pending"><div class="stat-icon"><span class="material-icons-round">search</span></div><div class="stat-info"><span class="stat-value" id="inspStatTotal">0</span><span class="stat-label">Total Inspecciones</span></div></div>
+        <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">dangerous</span></div><div class="stat-info"><span class="stat-value" id="inspStatCriticos">0</span><span class="stat-label">Hallazgos Críticos Abiertos</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">pending_actions</span></div><div class="stat-info"><span class="stat-value" id="inspStatEnProceso">0</span><span class="stat-label">En Proceso</span></div></div>
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">task_alt</span></div><div class="stat-info"><span class="stat-value" id="inspStatCerradas">0</span><span class="stat-label">Cerradas</span></div></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="filter-group" id="inspFilterGroup">
+          <button class="filter-btn active" data-filter="todas" onclick="setInspFilter('todas')">Todas</button>
+          <button class="filter-btn" data-filter="abierta" onclick="setInspFilter('abierta')">Abiertas</button>
+          <button class="filter-btn" data-filter="en_proceso" onclick="setInspFilter('en_proceso')">En Proceso</button>
+          <button class="filter-btn" data-filter="cerrada" onclick="setInspFilter('cerrada')">Cerradas</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Fecha</th><th>Embarcación</th><th>Inspector</th><th>Hallazgos</th><th>Críticos</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="inspTableBody"><tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay inspecciones registradas.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 7: ESTADÍSTICAS DE ACCIDENTABILIDAD
+         ======================================================== -->
+    <section class="view" id="view-estadisticas-acc">
+      <div class="view-header">
+        <div><h2>Estadísticas de Accidentabilidad</h2><p class="view-subtitle">Tasas Ley 16.744 — TF, TG y TA calculadas automáticamente</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('estadisticas-acc')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-secondary" onclick="openHHTModal()"><span class="material-icons-round">edit</span><span>Editar HHT</span></button>
+        </div>
+      </div>
+      <!-- KPI de tasas -->
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">analytics</span></div><div class="stat-info"><span class="stat-value" id="accStatTF">—</span><span class="stat-label">Tasa Frecuencia (TF)</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">trending_up</span></div><div class="stat-info"><span class="stat-value" id="accStatTG">—</span><span class="stat-label">Tasa Gravedad (TG)</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">percent</span></div><div class="stat-info"><span class="stat-value" id="accStatTA">—</span><span class="stat-label">Tasa Accidentabilidad (TA)</span></div></div>
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">event_available</span></div><div class="stat-info"><span class="stat-value" id="accStatDiasSin">0</span><span class="stat-label">Días sin Accidentes</span></div></div>
+      </div>
+      <!-- Fórmulas -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header"><h3>Fórmulas Ley 16.744</h3></div>
+        <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.85rem;text-align:center">
+            <div style="font-size:.7rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Tasa de Frecuencia</div>
+            <div style="font-size:.88rem;font-weight:700;font-family:monospace">TF = (N° Acc × 1.000.000) / HHT</div>
+          </div>
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.85rem;text-align:center">
+            <div style="font-size:.7rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Tasa de Gravedad</div>
+            <div style="font-size:.88rem;font-weight:700;font-family:monospace">TG = (Días Perdidos × 1.000.000) / HHT</div>
+          </div>
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.85rem;text-align:center">
+            <div style="font-size:.7rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Tasa de Accidentabilidad</div>
+            <div style="font-size:.88rem;font-weight:700;font-family:monospace">TA = (N° Acc × 200.000) / HHT</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tabla mes a mes -->
+      <div class="panel">
+        <div class="panel-header" style="justify-content:space-between">
+          <h3>Resumen Mensual <span id="accStatYear" style="color:var(--text-muted);font-size:.8rem;font-weight:500">2026</span></h3>
+          <div style="font-size:.75rem;color:var(--text-muted)">HHT total: <strong id="accStatHHT">0</strong> horas</div>
+        </div>
+        <div class="table-container" style="border:none;border-radius:0">
+          <table class="data-table">
+            <thead><tr><th>Mes</th><th>N° Accidentes</th><th>Días Perdidos</th><th>HHT</th><th>TF</th><th>TG</th><th>TA</th></tr></thead>
+            <tbody id="accStatTableBody"></tbody>
+          </table>
+        </div>
+        <div style="padding:1rem 1.2rem;border-top:1px solid var(--border)">
+          <canvas id="accStatChart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 9: CONTROL DE DOCUMENTOS
+         ======================================================== -->
+    <section class="view" id="view-doc-control">
+      <div class="view-header">
+        <div><h2>Control de Documentos</h2><p class="view-subtitle">Versiones, fechas de revisión y estado automático de vigencia</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('doc-control')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-primary" onclick="openDocControlModal()"><span class="material-icons-round">add</span><span>Nuevo Documento</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">folder</span></div><div class="stat-info"><span class="stat-value" id="docStatTotal">0</span><span class="stat-label">Total Documentos</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">verified</span></div><div class="stat-info"><span class="stat-value" id="docStatVigentes">0</span><span class="stat-label">Vigentes</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">schedule</span></div><div class="stat-info"><span class="stat-value" id="docStatPorRevisar">0</span><span class="stat-label">Por Revisar (30 días)</span></div></div>
+        <div class="stat-card stat-overdue"><div class="stat-icon"><span class="material-icons-round">cancel</span></div><div class="stat-info"><span class="stat-value" id="docStatVencidos">0</span><span class="stat-label">Vencidos</span></div></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="filter-group" id="docControlFilterGroup">
+          <button class="filter-btn active" data-filter="todos" onclick="setDocControlFilter('todos')">Todos</button>
+          <button class="filter-btn" data-filter="vigente" onclick="setDocControlFilter('vigente')">Vigentes</button>
+          <button class="filter-btn" data-filter="por_revisar" onclick="setDocControlFilter('por_revisar')">Por Revisar</button>
+          <button class="filter-btn" data-filter="vencido" onclick="setDocControlFilter('vencido')">Vencidos</button>
+        </div>
+        <div style="flex:1;max-width:320px;display:flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 .75rem">
+          <span class="material-icons-round" style="color:var(--text-muted);font-size:1.1rem">search</span>
+          <input type="text" id="docControlSearch" placeholder="Buscar documento..." style="border:none;background:none;padding:.55rem 0;font-size:.84rem;width:100%" oninput="refreshDocControl()">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Nombre</th><th>Tipo</th><th>Versión</th><th>Fecha Emisión</th><th>Próx. Revisión</th><th>Responsable</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="docControlTableBody"><tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay documentos registrados.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         MÓDULO 10: REGISTRO DE CAPACITACIONES
+         ======================================================== -->
+    <section class="view" id="view-cap-registro">
+      <div class="view-header">
+        <div><h2>Registro de Capacitaciones</h2><p class="view-subtitle">Asistentes, firmas y cumplimiento del programa anual</p></div>
+        <div class="view-actions">
+          <button class="btn-secondary" onclick="exportarPDF('cap-registro')"><span class="material-icons-round">picture_as_pdf</span><span>Exportar</span></button>
+          <button class="btn-primary" onclick="openCapRegistroModal()"><span class="material-icons-round">add</span><span>Registrar Capacitación</span></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+        <div class="stat-card stat-done"><div class="stat-icon"><span class="material-icons-round">school</span></div><div class="stat-info"><span class="stat-value" id="capStatTotal">0</span><span class="stat-label">Total Capacitaciones</span></div></div>
+        <div class="stat-card stat-progress"><div class="stat-icon"><span class="material-icons-round">group</span></div><div class="stat-info"><span class="stat-value" id="capStatAsistentes">0</span><span class="stat-label">Asistentes Totales</span></div></div>
+        <div class="stat-card stat-warning"><div class="stat-icon"><span class="material-icons-round">person_off</span></div><div class="stat-info"><span class="stat-value" id="capStatSin3Meses">0</span><span class="stat-label">Sin cap. 3+ meses</span></div></div>
+        <div class="stat-card stat-pending"><div class="stat-icon"><span class="material-icons-round">percent</span></div><div class="stat-info"><span class="stat-value" id="capStatCumplimiento">0%</span><span class="stat-label">Cumplimiento Programa</span></div></div>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+        <div class="filter-group" id="capFilterGroup">
+          <button class="filter-btn active" data-filter="todos" onclick="setCapFilter('todos')">Todas</button>
+          <button class="filter-btn" data-filter="buceo" onclick="setCapFilter('buceo')">Buceo</button>
+          <button class="filter-btn" data-filter="emergencias" onclick="setCapFilter('emergencias')">Emergencias</button>
+          <button class="filter-btn" data-filter="legal" onclick="setCapFilter('legal')">Legal/SST</button>
+        </div>
+        <div style="flex:1;max-width:320px;display:flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 .75rem">
+          <span class="material-icons-round" style="color:var(--text-muted);font-size:1.1rem">search</span>
+          <input type="text" id="capSearch" placeholder="Buscar capacitación..." style="border:none;background:none;padding:.55rem 0;font-size:.84rem;width:100%" oninput="refreshCapRegistro()">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr><th>Tema</th><th>Categoría</th><th>Fecha</th><th>Relator</th><th>Asistentes</th><th>Duración</th><th>Acciones</th></tr></thead>
+          <tbody id="capTableBody"><tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay capacitaciones registradas.</td></tr></tbody>
+        </table>
+      </div>
+      <!-- Panel cumplimiento por cargo -->
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-header"><h3>Cumplimiento por Cargo</h3></div>
+        <div class="panel-body">
+          <div id="capCumplimientoGrid" class="category-bars"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== MODAL EDITAR EMBARCACIÓN ===== -->
     <div class="modal-overlay" id="embEditModalOverlay">
       <div class="modal modal-wide" id="embEditModal">
@@ -1848,6 +2157,292 @@
           <button type="button" class="btn-primary" id="fichaExamenSave">
             <span class="material-icons-round">save</span> Guardar
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL SALUD OCUPACIONAL ===== -->
+    <div class="modal-overlay" id="saludModalOverlay">
+      <div class="modal modal-wide" id="saludModal" style="max-width:720px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(56,189,248,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--success)">monitor_heart</span><span id="saludModalTitle">Registro Salud Ocupacional</span></h3>
+          <button class="btn-icon" onclick="closeSaludModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="saludId">
+          <div class="form-section-title">Datos del Trabajador</div>
+          <div class="form-row">
+            <div class="form-group"><label>Nombre Completo</label><input type="text" id="saludNombre" placeholder="Nombre y apellidos"></div>
+            <div class="form-group"><label>RUT</label><input type="text" id="saludRut" placeholder="12.345.678-9"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Cargo</label><select id="saludCargo"><option value="">Seleccionar...</option><option>Buzo Básico</option><option>Supervisor de Buceo</option><option>Patrón de Nave</option><option>Tripulante</option><option>Motorista</option><option>Cocinero</option><option>Operario</option></select></div>
+            <div class="form-group"><label>Embarcación</label><select id="saludEmbarcacion"><option value="">Seleccionar...</option><option>María José</option><option>Alvarito</option><option>Aukan</option><option>Don Humberto</option><option>Lafquen</option></select></div>
+          </div>
+          <div class="form-section-title">Control de Exámenes Ocupacionales</div>
+          <div class="form-row">
+            <div class="form-group"><label>Último Examen Ocupacional</label><input type="date" id="saludUltimoExamen"></div>
+            <div class="form-group"><label>Próximo Examen</label><input type="date" id="saludProxExamen"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Centro Médico</label><input type="text" id="saludCentro" placeholder="Ej: ACHS Coyhaique"></div>
+            <div class="form-group"><label>Resultado / Aptitud</label><select id="saludAptitud"><option value="apto">Apto</option><option value="apto_restricciones">Apto con Restricciones</option><option value="no_apto">No Apto</option><option value="pendiente">Pendiente Evaluación</option></select></div>
+          </div>
+          <div class="form-group"><label>Restricciones / Observaciones Médicas</label><textarea id="saludRestricciones" rows="2" placeholder="Ej: No trabajar en altura, control auditivo semestral..."></textarea></div>
+          <div class="form-section-title">Control Hiperbaria (Solo Buzos)</div>
+          <div class="form-row">
+            <div class="form-group"><label>Último Examen Hiperbárico</label><input type="date" id="saludHiperUltimo"></div>
+            <div class="form-group"><label>Próximo Examen Hiperbárico</label><input type="date" id="saludHiperProx"></div>
+          </div>
+          <div class="form-group"><label>Observaciones Hiperbaria</label><textarea id="saludHiperObs" rows="2" placeholder="Ej: Barotrauma leve registrado en 2025, seguimiento neurológico..."></textarea></div>
+          <div class="form-section-title">Enfermedades Profesionales</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <span style="font-size:.8rem;color:var(--text-secondary)">Registrar si aplica</span>
+            <button type="button" onclick="saludAgregarEnfermedad()" style="background:var(--accent-glow);color:var(--accent-light);border:1px solid rgba(139,92,246,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">add</span>Agregar</button>
+          </div>
+          <div id="saludEnfContainer"></div>
+          <div class="form-section-title">Historial Médico Laboral</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <span style="font-size:.8rem;color:var(--text-secondary)">Entradas del historial</span>
+            <button type="button" onclick="saludAgregarHistorial()" style="background:var(--accent-glow);color:var(--accent-light);border:1px solid rgba(139,92,246,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">add</span>Agregar</button>
+          </div>
+          <div id="saludHistorialContainer"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeSaludModal()">Cancelar</button>
+          <button class="btn-danger" id="saludBtnDelete" style="display:none" onclick="deleteSaludOcup()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="saveSaludOcup()"><span class="material-icons-round">save</span> Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL PTS ===== -->
+    <div class="modal-overlay" id="ptsModalOverlay">
+      <div class="modal modal-wide" id="ptsModal" style="max-width:780px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(139,92,246,.10),rgba(99,102,241,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">engineering</span><span id="ptsModalTitle">Nuevo PTS</span></h3>
+          <button class="btn-icon" onclick="closePTSModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="ptsId">
+          <div class="form-row">
+            <div class="form-group"><label>Nombre del PTS</label><input type="text" id="ptsNombre" placeholder="Ej: Baño de Peces en Embarcación"></div>
+            <div class="form-group"><label>Actividad / Proceso</label><input type="text" id="ptsActividad" placeholder="Ej: Operación de Acuicultura"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Versión</label><input type="text" id="ptsVersion" value="v1.0" placeholder="v1.0"></div>
+            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="ptsFecha"></div>
+          </div>
+          <div class="form-group"><label>Objetivo</label><textarea id="ptsObjetivo" rows="2" placeholder="Describir el objetivo del procedimiento..."></textarea></div>
+          <div class="form-group"><label>Alcance</label><textarea id="ptsAlcance" rows="2" placeholder="¿A quiénes aplica este procedimiento?"></textarea></div>
+          <div class="form-group"><label>EPP Requerido</label><input type="text" id="ptsEPP" placeholder="Ej: Casco, guantes de nitrilo, botas de goma, chaleco salvavidas..."></div>
+          <div class="form-group"><label>Descripción del Riesgo</label><textarea id="ptsRiesgos" rows="2" placeholder="Principales riesgos de la actividad..."></textarea></div>
+          <div class="form-group"><label>Medidas de Control</label><textarea id="ptsMedidas" rows="2" placeholder="Medidas preventivas y de control..."></textarea></div>
+          <div class="form-section-title">Paso a Paso del Procedimiento</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <span style="font-size:.8rem;color:var(--text-secondary)">Agrega los pasos en orden</span>
+            <button type="button" onclick="ptsAgregarPaso()" style="background:var(--accent-glow);color:var(--accent-light);border:1px solid rgba(139,92,246,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">add</span>Agregar Paso</button>
+          </div>
+          <div id="ptsPasosContainer"></div>
+          <div class="form-section-title">Registro de Lectura y Firma</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <span style="font-size:.8rem;color:var(--text-secondary)">Trabajadores que leyeron y aceptaron el PTS</span>
+            <button type="button" onclick="ptsAgregarFirma()" style="background:var(--success-glow);color:var(--success);border:1px solid rgba(34,197,94,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">how_to_reg</span>Registrar Firma</button>
+          </div>
+          <div id="ptsFirmasContainer"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closePTSModal()">Cancelar</button>
+          <button class="btn-danger" id="ptsBtnDelete" style="display:none" onclick="deletePTS()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="savePTS()"><span class="material-icons-round">save</span> Guardar PTS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL PLAN EMERGENCIA ===== -->
+    <div class="modal-overlay" id="planEmergModalOverlay">
+      <div class="modal modal-wide" id="planEmergModal" style="max-width:720px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(234,179,8,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--danger)">sos</span><span id="planEmergModalTitle">Nuevo Plan de Emergencia</span></h3>
+          <button class="btn-icon" onclick="closePlanEmergModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="planEmergId">
+          <div class="form-row">
+            <div class="form-group"><label>Embarcación</label><select id="planEmergEmb"><option value="">Seleccionar...</option><option>María José</option><option>Alvarito</option><option>Aukan</option><option>Don Humberto</option><option>Lafquen</option></select></div>
+            <div class="form-group"><label>Tipo de Emergencia</label><select id="planEmergTipo"><option value="abandono_nave">Abandono de Nave</option><option value="hombre_agua">Hombre al Agua</option><option value="incendio">Incendio a Bordo</option><option value="varada">Varada</option><option value="otro">Otro</option></select></div>
+          </div>
+          <div class="form-group"><label>Procedimiento (pasos de actuación)</label><textarea id="planEmergProcedimiento" rows="4" placeholder="Describir los pasos a seguir ante esta emergencia..."></textarea></div>
+          <div class="form-section-title">Roles y Responsabilidades</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <span style="font-size:.8rem;color:var(--text-secondary)">Asignar responsabilidades por cargo</span>
+            <button type="button" onclick="planEmergAgregarRol()" style="background:var(--danger-glow);color:var(--danger);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">add</span>Agregar Rol</button>
+          </div>
+          <div id="planEmergRolesContainer"></div>
+          <div class="form-section-title">Equipos y Recursos de Emergencia</div>
+          <div class="form-group"><label>Punto de Encuentro</label><input type="text" id="planEmergPunto" placeholder="Ej: Cubierta popa, bote salvavidas babor..."></div>
+          <div class="form-group"><label>Equipos Disponibles</label><textarea id="planEmergEquipos" rows="2" placeholder="Ej: 2 botes salvavidas, 12 chalecos, balsa inflable, EPIRB, bengalas..."></textarea></div>
+          <div class="form-group"><label>Comunicaciones</label><input type="text" id="planEmergComun" placeholder="Ej: VHF Canal 16, teléfono MRCC Punta Arenas: +56..."></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closePlanEmergModal()">Cancelar</button>
+          <button class="btn-danger" id="planEmergBtnDelete" style="display:none" onclick="deletePlanEmerg()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="savePlanEmerg()"><span class="material-icons-round">save</span> Guardar Plan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL EQUIPO / COMPRESOR ===== -->
+    <div class="modal-overlay" id="equipoModalOverlay">
+      <div class="modal" id="equipoModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(56,189,248,.10),rgba(139,92,246,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--info)">build</span><span id="equipoModalTitle">Nuevo Equipo</span></h3>
+          <button class="btn-icon" onclick="closeEquipoModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="equipoId">
+          <div class="form-row">
+            <div class="form-group"><label>Nombre del Equipo</label><input type="text" id="equipoNombre" placeholder="Ej: Compresor BAUER Capitano"></div>
+            <div class="form-group"><label>Tipo</label><select id="equipoTipo"><option value="compresor_buceo">Compresor de Buceo</option><option value="izaje">Equipo de Izaje</option><option value="herr_electrica">Herramienta Eléctrica</option><option value="nautico">Equipo Náutico</option><option value="otro">Otro</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Marca / Modelo</label><input type="text" id="equipoMarca" placeholder="Ej: BAUER / Capitano 100"></div>
+            <div class="form-group"><label>N° de Serie</label><input type="text" id="equipoSerie" placeholder="Ej: BA-2024-001"></div>
+          </div>
+          <div class="form-group"><label>Embarcación Asignada</label><select id="equipoEmbarcacion"><option value="">Seleccionar...</option><option>María José</option><option>Alvarito</option><option>Aukan</option><option>Don Humberto</option><option>Lafquen</option><option>Sin asignar</option></select></div>
+          <div class="form-section-title">Mantenimiento</div>
+          <div class="form-row">
+            <div class="form-group"><label>Última Mantención</label><input type="date" id="equipoUltMant"></div>
+            <div class="form-group"><label>Próxima Mantención</label><input type="date" id="equipoProxMant"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Última Calibración</label><input type="date" id="equipoUltCalib"></div>
+            <div class="form-group"><label>Estado Actual</label><select id="equipoEstado"><option value="operativo">Operativo</option><option value="en_mant">En Mantención</option><option value="fuera_servicio">Fuera de Servicio</option></select></div>
+          </div>
+          <div class="form-group"><label>Observaciones</label><textarea id="equipoObs" rows="2" placeholder="Notas adicionales sobre el equipo..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeEquipoModal()">Cancelar</button>
+          <button class="btn-danger" id="equipoBtnDelete" style="display:none" onclick="deleteEquipo()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="saveEquipo()"><span class="material-icons-round">save</span> Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL INSPECCIÓN MEJORADA ===== -->
+    <div class="modal-overlay" id="inspeccionV2ModalOverlay">
+      <div class="modal modal-wide" id="inspeccionV2Modal" style="max-width:720px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(234,179,8,.10),rgba(239,68,68,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--warning)">search</span><span id="inspeccionV2Title">Nueva Inspección</span></h3>
+          <button class="btn-icon" onclick="closeInspeccionV2Modal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="inspV2Id">
+          <div class="form-row">
+            <div class="form-group"><label>Fecha de Inspección</label><input type="date" id="inspV2Fecha"></div>
+            <div class="form-group"><label>Embarcación</label><select id="inspV2Emb"><option value="">Seleccionar...</option><option>María José</option><option>Alvarito</option><option>Aukan</option><option>Don Humberto</option><option>Lafquen</option><option>Tierra / Instalaciones</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Inspector</label><input type="text" id="inspV2Inspector" value="Bastian Ancapán Vera"></div>
+            <div class="form-group"><label>Estado General</label><select id="inspV2Estado"><option value="abierta">Abierta</option><option value="en_proceso">En Proceso</option><option value="cerrada">Cerrada</option></select></div>
+          </div>
+          <div class="form-group"><label>Observaciones Generales</label><textarea id="inspV2Obs" rows="2" placeholder="Contexto de la inspección, condiciones, etc."></textarea></div>
+          <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Hallazgos</span>
+            <button type="button" onclick="inspV2AgregarHallazgo()" style="background:var(--warning-glow);color:var(--warning);border:1px solid rgba(234,179,8,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">add</span>Agregar Hallazgo</button>
+          </div>
+          <div id="inspV2HallazgosContainer" style="margin-top:.5rem"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeInspeccionV2Modal()">Cancelar</button>
+          <button class="btn-danger" id="inspV2BtnDelete" style="display:none" onclick="deleteInspeccionV2()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="saveInspeccionV2()"><span class="material-icons-round">save</span> Guardar Inspección</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL HHT (Horas Hombre Trabajadas) ===== -->
+    <div class="modal-overlay" id="hhtModalOverlay">
+      <div class="modal" id="hhtModal">
+        <div class="modal-header">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">schedule</span>Ingresar HHT Mensual</h3>
+          <button class="btn-icon" onclick="closeHHTModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:1rem">Ingresa las Horas Hombre Trabajadas por mes para calcular las tasas de accidentabilidad según Ley 16.744.</p>
+          <div id="hhtInputsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeHHTModal()">Cancelar</button>
+          <button class="btn-primary" onclick="saveHHT()"><span class="material-icons-round">save</span> Guardar HHT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL CONTROL DE DOCUMENTOS ===== -->
+    <div class="modal-overlay" id="docControlModalOverlay">
+      <div class="modal" id="docControlModal">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(139,92,246,.10),rgba(56,189,248,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">manage_search</span><span id="docControlModalTitle">Nuevo Documento</span></h3>
+          <button class="btn-icon" onclick="closeDocControlModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="docControlId">
+          <div class="form-group"><label>Nombre del Documento</label><input type="text" id="docControlNombre" placeholder="Ej: Reglamento Interno de Orden, Higiene y Seguridad"></div>
+          <div class="form-row">
+            <div class="form-group"><label>Tipo</label><select id="docControlTipo"><option value="reglamento">Reglamento</option><option value="procedimiento">Procedimiento</option><option value="instruccion">Instrucción de Trabajo</option><option value="certificacion">Certificación</option><option value="contrato">Contrato</option><option value="protocolo">Protocolo</option><option value="otro">Otro</option></select></div>
+            <div class="form-group"><label>Versión</label><input type="text" id="docControlVersion" placeholder="v1.0" value="v1.0"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Fecha de Emisión</label><input type="date" id="docControlEmision"></div>
+            <div class="form-group"><label>Próxima Revisión</label><input type="date" id="docControlRevision"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Responsable</label><input type="text" id="docControlResponsable" value="Bastian Ancapán Vera"></div>
+            <div class="form-group"><label>Link Documento</label><input type="text" id="docControlLink" placeholder="Link Google Drive o ruta interna"></div>
+          </div>
+          <div class="form-group"><label>Descripción / Alcance</label><textarea id="docControlDesc" rows="2" placeholder="Breve descripción del documento..."></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeDocControlModal()">Cancelar</button>
+          <button class="btn-danger" id="docControlBtnDelete" style="display:none" onclick="deleteDocControl()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="saveDocControl()"><span class="material-icons-round">save</span> Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL REGISTRO CAPACITACIÓN ===== -->
+    <div class="modal-overlay" id="capRegistroModalOverlay">
+      <div class="modal modal-wide" id="capRegistroModal" style="max-width:720px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(56,189,248,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--success)">school</span><span id="capRegistroModalTitle">Registrar Capacitación</span></h3>
+          <button class="btn-icon" onclick="closeCapRegistroModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="capRegistroId">
+          <div class="form-row">
+            <div class="form-group"><label>Tema / Título</label><input type="text" id="capTema" placeholder="Ej: Uso correcto de EPP en buceo"></div>
+            <div class="form-group"><label>Categoría</label><select id="capCategoria"><option value="buceo">Buceo y Operaciones Marítimas</option><option value="emergencias">Emergencias y Primeros Auxilios</option><option value="legal">Legal / SST</option><option value="epp">EPP y Equipos</option><option value="otro">Otro</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Fecha</label><input type="date" id="capFecha"></div>
+            <div class="form-group"><label>Duración (horas)</label><input type="number" id="capDuracion" min="1" value="2" placeholder="2"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Relator / Instructor</label><input type="text" id="capRelator" placeholder="Nombre del relator"></div>
+            <div class="form-group"><label>Lugar</label><input type="text" id="capLugar" placeholder="Ej: Puerto Melinka, a bordo María José"></div>
+          </div>
+          <div class="form-group"><label>Descripción / Contenido</label><textarea id="capDesc" rows="2" placeholder="Resumen de los temas tratados..."></textarea></div>
+          <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Lista de Asistentes</span>
+            <button type="button" onclick="capAgregarAsistente()" style="background:var(--success-glow);color:var(--success);border:1px solid rgba(34,197,94,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem"><span class="material-icons-round" style="font-size:.9rem">person_add</span>Agregar</button>
+          </div>
+          <div id="capAsistentesContainer" style="margin-top:.5rem"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeCapRegistroModal()">Cancelar</button>
+          <button class="btn-danger" id="capRegistroBtnDelete" style="display:none" onclick="deleteCapRegistro()"><span class="material-icons-round">delete</span></button>
+          <button class="btn-primary" onclick="saveCapRegistro()"><span class="material-icons-round">save</span> Guardar Capacitación</button>
         </div>
       </div>
     </div>
