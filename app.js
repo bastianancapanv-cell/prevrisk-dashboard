@@ -37,7 +37,7 @@ function saveFilesMeta(meta) {
 }
 
 let _cst=null;
-function setCloudStatus(s){const el=document.getElementById('cloudIndicator'),ic=document.getElementById('cloudIcon'),tx=document.getElementById('cloudText');if(!el)return;const m={syncing:{color:'var(--accent)',border:'rgba(0,198,167,.3)',icon:'cloud_upload',text:'Sincronizando...'},error:{color:'var(--danger)',border:'rgba(244,63,94,.3)',icon:'cloud_off',text:'Sin conexión'},synced:{color:'var(--success)',border:'rgba(16,185,129,.3)',icon:'cloud_done',text:'Sincronizado'}};const d=m[s]||m.synced;el.style.color=d.color;el.style.borderColor=d.border;if(ic){ic.textContent=d.icon;ic.style.animation=s==='syncing'?'spin .8s linear infinite':'';}if(tx)tx.textContent=d.text;}
+function setCloudStatus(s){const el=document.getElementById('cloudIndicator'),ic=document.getElementById('cloudIcon');if(!el)return;const m={syncing:{color:'var(--accent)',border:'rgba(139,92,246,.3)',icon:'cloud_upload'},error:{color:'var(--danger)',border:'rgba(239,68,68,.3)',icon:'cloud_off'},synced:{color:'var(--success)',border:'rgba(34,197,94,.3)',icon:'cloud_done'}};const d=m[s]||m.synced;el.style.color=d.color;el.style.borderColor=d.border;if(ic){ic.textContent=d.icon;ic.style.animation=s==='syncing'?'spin .8s linear infinite':'';el.title=s==='syncing'?'Sincronizando...':s==='error'?'Sin conexión — cambios guardados localmente':'Sincronizado con la nube';}}
 function cloudSave(docPath,data){setCloudStatus('syncing');clearTimeout(_cst);firestore.doc(docPath).set({data:JSON.parse(JSON.stringify(data)),updatedAt:new Date().toISOString()}).then(()=>{_cst=setTimeout(()=>setCloudStatus('synced'),800);}).catch(e=>{console.warn('Cloud save error:',e);setCloudStatus('error');});}
 
 function loadItems() {
@@ -4009,20 +4009,6 @@ const NOTIF_KEY = 'prevrisk_notif_config';
 
 function initNotificaciones() {
   if (!('Notification' in window)) return;
-
-  // Botón en topbar si no existe
-  if (!document.getElementById('btnNotif')) {
-    const topbarActions = document.querySelector('.topbar-actions');
-    if (topbarActions) {
-      const btn = document.createElement('button');
-      btn.id = 'btnNotif';
-      btn.className = 'btn-icon';
-      btn.title = 'Notificaciones';
-      btn.innerHTML = `<span class="material-icons-round" id="notifIcon" style="color:var(--text-muted)">notifications</span>`;
-      topbarActions.insertBefore(btn, topbarActions.firstChild);
-      btn.addEventListener('click', toggleNotifPanel);
-    }
-  }
 
   // Panel de configuración de notificaciones
   if (!document.getElementById('notifPanel')) {
