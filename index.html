@@ -1623,52 +1623,6 @@
     </div>
 
 
-    <!-- ===== LOGIN MODAL ===== -->
-    <div class="modal-overlay active" id="loginOverlay" style="z-index:9999;">
-      <div class="modal" style="max-width:420px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,rgba(0,198,167,.13),rgba(59,130,246,.09));border-bottom:1px solid var(--border);padding:2.2rem 2rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;">
-          <div style="display:grid;place-items:center;margin-bottom:.25rem">
-            <svg viewBox="0 0 32 32" width="52" height="52" fill="none"><defs><linearGradient id="briza-login" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#briza-login)"/><path d="M6 22 Q11 15 16 18 Q21 22 26 15" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M6 26 Q11 19 16 22 Q21 26 26 19" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="10" r="3.5" fill="white" opacity="0.95"/></svg>
-          </div>
-          <div style="text-align:center;">
-            <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.5px;color:#f1f5f9">briza</h2>
-            <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;letter-spacing:.8px;text-transform:uppercase">Panel de Prevención de Riesgos</p>
-          </div>
-        </div>
-        <div style="padding:1.75rem 2rem 2rem;">
-          <div id="loginError" style="display:none;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:10px;padding:.75rem 1rem;font-size:.82rem;color:var(--danger);margin-bottom:1.1rem;align-items:center;gap:.5rem;">
-            <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;">error</span>
-            <span id="loginErrorText">Usuario o contraseña incorrectos.</span>
-          </div>
-          <div class="form-group" style="margin-bottom:1rem;">
-            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Usuario</label>
-            <div style="position:relative;">
-              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">person</span>
-              <input type="text" id="loginUser" placeholder="Ingresa tu usuario" autocomplete="username" style="padding-left:2.8rem;">
-            </div>
-          </div>
-          <div class="form-group" style="margin-bottom:1.5rem;">
-            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Contraseña</label>
-            <div style="position:relative;">
-              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">lock</span>
-              <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()" style="padding-left:2.8rem;padding-right:2.8rem;">
-              <button type="button" id="btnTogglePass" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;">
-                <span class="material-icons-round" style="font-size:1.1rem;">visibility</span>
-              </button>
-            </div>
-          </div>
-          <button class="btn-primary" id="btnLogin" onclick="doLogin()" style="width:100%;justify-content:center;padding:.85rem 1.5rem;font-size:.95rem;border-radius:10px;">
-            <span class="material-icons-round">login</span>
-            Ingresar al Sistema
-          </button>
-          <p style="text-align:center;font-size:.7rem;color:var(--text-muted);margin-top:1.2rem;">
-            <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;">lock</span>
-            Acceso restringido — Solo personal autorizado
-          </p>
-        </div>
-      </div>
-    </div>
-
     <!-- ===== MODAL ACCIDENTE ===== -->
     <div class="modal-overlay" id="accidenteModalOverlay">
       <div class="modal modal-wide" id="accidenteModal">
@@ -2725,6 +2679,52 @@
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ===== LOGIN MODAL — nivel body para no quedar dentro del stacking context de main ===== -->
+    <div class="modal-overlay active" id="loginOverlay" style="z-index:9999;position:fixed;inset:0;background:#09090b;backdrop-filter:none;-webkit-backdrop-filter:none;">
+      <div class="modal" style="max-width:420px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,rgba(37,99,235,.13),rgba(30,58,95,.09));border-bottom:1px solid var(--border);padding:2.2rem 2rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;">
+          <div style="display:grid;place-items:center;margin-bottom:.25rem">
+            <svg viewBox="0 0 32 32" width="52" height="52" fill="none"><defs><linearGradient id="briza-login" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#briza-login)"/><path d="M6 22 Q11 15 16 18 Q21 22 26 15" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M6 26 Q11 19 16 22 Q21 26 26 19" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="10" r="3.5" fill="white" opacity="0.95"/></svg>
+          </div>
+          <div style="text-align:center;">
+            <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.5px;color:#f1f5f9">briza</h2>
+            <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;letter-spacing:.8px;text-transform:uppercase">Panel de Prevención de Riesgos</p>
+          </div>
+        </div>
+        <div style="padding:1.75rem 2rem 2rem;">
+          <div id="loginError" style="display:none;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-radius:10px;padding:.75rem 1rem;font-size:.82rem;color:var(--danger);margin-bottom:1.1rem;align-items:center;gap:.5rem;">
+            <span class="material-icons-round" style="font-size:1rem;flex-shrink:0;">error</span>
+            <span id="loginErrorText">Usuario o contraseña incorrectos.</span>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Usuario</label>
+            <div style="position:relative;">
+              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">person</span>
+              <input type="text" id="loginUser" placeholder="Ingresa tu usuario" autocomplete="username" style="padding-left:2.8rem;">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label style="font-size:.72rem;font-weight:800;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:.4rem;">Contraseña</label>
+            <div style="position:relative;">
+              <span class="material-icons-round" style="position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:1.1rem;pointer-events:none;">lock</span>
+              <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()" style="padding-left:2.8rem;padding-right:2.8rem;">
+              <button type="button" id="btnTogglePass" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;">
+                <span class="material-icons-round" style="font-size:1.1rem;">visibility</span>
+              </button>
+            </div>
+          </div>
+          <button class="btn-primary" id="btnLogin" onclick="doLogin()" style="width:100%;justify-content:center;padding:.85rem 1.5rem;font-size:.95rem;border-radius:10px;">
+            <span class="material-icons-round">login</span>
+            Ingresar al Sistema
+          </button>
+          <p style="text-align:center;font-size:.7rem;color:var(--text-muted);margin-top:1.2rem;">
+            <span class="material-icons-round" style="font-size:.85rem;vertical-align:middle;">lock</span>
+            Acceso restringido — Solo personal autorizado
+          </p>
+        </div>
+      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js" onload="if(typeof refreshAll === 'function') refreshAll()"></script>
     <script src="app.js"></script>
