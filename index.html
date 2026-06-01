@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
@@ -277,6 +278,9 @@
                 <button class="btn-icon" id="btnNotifBell" title="Notificaciones" style="position:relative;">
                     <span class="material-icons-round">notifications</span>
                     <span id="notifBadge" style="display:none;position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:#f43f5e;box-shadow:0 0 0 2px #060b18;"></span>
+                </button>
+                <button class="btn-icon" id="btnEmailConfig" title="Configurar alertas por email" onclick="openEmailConfigModal()">
+                    <span class="material-icons-round" id="emailConfigIcon">mail</span>
                 </button>
                 <button class="btn-icon" id="themeToggle" title="Cambiar tema">
                     <span class="material-icons-round">dark_mode</span>
@@ -2019,6 +2023,108 @@
     </section>
 
     </main>
+
+    <!-- ===== MODAL CONFIGURACIÓN EMAIL ALERTAS ===== -->
+    <div class="modal-overlay" id="emailConfigModalOverlay">
+      <div class="modal" id="emailConfigModal" style="max-width:600px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(56,189,248,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">mail</span>Alertas por Email — Configuración</h3>
+          <button class="btn-icon" onclick="closeEmailConfigModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Estado actual -->
+          <div id="emailConfigStatus" style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:.75rem">
+            <span class="material-icons-round" id="emailStatusIcon" style="font-size:1.3rem;color:var(--text-muted)">mail_outline</span>
+            <div><div id="emailStatusText" style="font-size:.84rem;font-weight:700">Sin configurar</div><div style="font-size:.72rem;color:var(--text-muted);margin-top:.1rem">Configura EmailJS para recibir alertas automáticas</div></div>
+            <button onclick="testEmailAlert()" class="btn-secondary" style="margin-left:auto;font-size:.78rem;padding:.38rem .8rem">Probar</button>
+          </div>
+
+          <!-- Configuración EmailJS -->
+          <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Credenciales EmailJS</span>
+            <a href="https://www.emailjs.com" target="_blank" style="font-size:.72rem;color:var(--accent);text-decoration:underline">Crear cuenta gratis →</a>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Public Key</label>
+              <input type="text" id="emailPublicKey" placeholder="Ej: user_aBcDeFgHiJkLm">
+            </div>
+            <div class="form-group">
+              <label>Service ID</label>
+              <input type="text" id="emailServiceId" placeholder="Ej: service_xxxxxxx">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Template ID</label>
+            <input type="text" id="emailTemplateId" placeholder="Ej: template_xxxxxxx">
+          </div>
+          <div class="form-group">
+            <label>Email Destinatario</label>
+            <input type="email" id="emailDest" placeholder="bastianancapanv@gmail.com" value="bastianancapanv@gmail.com">
+          </div>
+
+          <!-- Configuración de alertas -->
+          <div class="form-section-title">Parámetros de Alerta</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Días de anticipación</label>
+              <select id="emailDiasAviso">
+                <option value="7">7 días antes</option>
+                <option value="15">15 días antes</option>
+                <option value="30" selected>30 días antes</option>
+                <option value="45">45 días antes</option>
+                <option value="60">60 días antes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Hora de envío diario</label>
+              <select id="emailHoraEnvio">
+                <option value="8">08:00 hrs</option>
+                <option value="9" selected>09:00 hrs</option>
+                <option value="10">10:00 hrs</option>
+                <option value="12">12:00 hrs</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Qué módulos revisar -->
+          <div class="form-section-title">Módulos a monitorear</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkEPP" checked style="accent-color:var(--accent)"> Certificaciones EPP</label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkExtintores" checked style="accent-color:var(--accent)"> Extintores</label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkExamenes" checked style="accent-color:var(--accent)"> Exámenes Ocupacionales</label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkDocControl" checked style="accent-color:var(--accent)"> Control de Documentos</label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkEquipos" checked style="accent-color:var(--accent)"> Equipos y Compresores</label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;cursor:pointer"><input type="checkbox" id="emailChkSalud" checked style="accent-color:var(--accent)"> Salud Ocupacional</label>
+          </div>
+
+          <!-- Instrucciones -->
+          <details style="margin-top:1.1rem">
+            <summary style="cursor:pointer;font-size:.8rem;font-weight:700;color:var(--accent-light);padding:.4rem 0;user-select:none">¿Cómo configurar EmailJS? (instrucciones paso a paso)</summary>
+            <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:.9rem 1rem;margin-top:.5rem;font-size:.8rem;line-height:1.7;color:var(--text-secondary)">
+              <ol style="padding-left:1.2rem;margin:0">
+                <li>Ve a <strong style="color:var(--accent)">emailjs.com</strong> y crea una cuenta gratuita</li>
+                <li>En <em>Email Services</em>, conecta tu Gmail (botón "Add New Service")</li>
+                <li>Copia el <strong>Service ID</strong> que aparece (ej: <code style="background:var(--bg-card);padding:.1rem .3rem;border-radius:3px">service_abc123</code>)</li>
+                <li>En <em>Email Templates</em>, crea un template nuevo con:
+                  <br>• <strong>Subject:</strong> <code style="background:var(--bg-card);padding:.1rem .3rem;border-radius:3px">&#123;&#123;subject&#125;&#125;</code>
+                  <br>• <strong>Body:</strong> <code style="background:var(--bg-card);padding:.1rem .3rem;border-radius:3px">&#123;&#123;message&#125;&#125;</code>
+                  <br>• <strong>To email:</strong> <code style="background:var(--bg-card);padding:.1rem .3rem;border-radius:3px">&#123;&#123;to_email&#125;&#125;</code>
+                </li>
+                <li>Copia el <strong>Template ID</strong> (ej: <code style="background:var(--bg-card);padding:.1rem .3rem;border-radius:3px">template_xyz789</code>)</li>
+                <li>En <em>Account → General</em>, copia tu <strong>Public Key</strong></li>
+                <li>Pega los 3 valores arriba y haz clic en "Guardar"</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeEmailConfigModal()">Cerrar</button>
+          <button class="btn-primary" onclick="saveEmailConfig()"><span class="material-icons-round">save</span> Guardar Configuración</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== MODAL EDITAR EMBARCACIÓN ===== -->
     <div class="modal-overlay" id="embEditModalOverlay">

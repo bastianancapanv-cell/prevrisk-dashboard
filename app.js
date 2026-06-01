@@ -5529,5 +5529,251 @@ renderNotifList=function(){
 };
 
 // ================================================================
+// ===== SISTEMA DE ALERTAS POR EMAIL (EmailJS) =====
+// ================================================================
+
+const EMAIL_CFG_KEY  = 'prevrisk_email_config';
+const EMAIL_SENT_KEY = 'prevrisk_email_sent';
+
+function loadEmailConfig() {
+  try { return JSON.parse(localStorage.getItem(EMAIL_CFG_KEY)) || {}; } catch { return {}; }
+}
+function saveEmailConfig2(cfg) {
+  localStorage.setItem(EMAIL_CFG_KEY, JSON.stringify(cfg));
+}
+
+// ── Modal ──────────────────────────────────────────────────────────
+function openEmailConfigModal() {
+  const cfg = loadEmailConfig();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+  set('emailPublicKey', cfg.publicKey);
+  set('emailServiceId', cfg.serviceId);
+  set('emailTemplateId', cfg.templateId);
+  set('emailDest', cfg.emailDest || 'bastianancapanv@gmail.com');
+  set('emailDiasAviso', cfg.diasAviso || 30);
+  set('emailHoraEnvio', cfg.horaEnvio || 9);
+  const chks = ['EPP','Extintores','Examenes','DocControl','Equipos','Salud'];
+  chks.forEach(k => {
+    const el = document.getElementById('emailChk' + k);
+    if (el) el.checked = cfg['chk' + k] !== false;
+  });
+  updateEmailConfigStatus();
+  document.getElementById('emailConfigModalOverlay')?.classList.add('active');
+}
+
+function closeEmailConfigModal() {
+  document.getElementById('emailConfigModalOverlay')?.classList.remove('active');
+}
+
+function saveEmailConfig() {
+  const cfg = {
+    publicKey:  document.getElementById('emailPublicKey')?.value.trim(),
+    serviceId:  document.getElementById('emailServiceId')?.value.trim(),
+    templateId: document.getElementById('emailTemplateId')?.value.trim(),
+    emailDest:  document.getElementById('emailDest')?.value.trim(),
+    diasAviso:  parseInt(document.getElementById('emailDiasAviso')?.value) || 30,
+    horaEnvio:  parseInt(document.getElementById('emailHoraEnvio')?.value) || 9,
+    chkEPP:          document.getElementById('emailChkEPP')?.checked !== false,
+    chkExtintores:   document.getElementById('emailChkExtintores')?.checked !== false,
+    chkExamenes:     document.getElementById('emailChkExamenes')?.checked !== false,
+    chkDocControl:   document.getElementById('emailChkDocControl')?.checked !== false,
+    chkEquipos:      document.getElementById('emailChkEquipos')?.checked !== false,
+    chkSalud:        document.getElementById('emailChkSalud')?.checked !== false,
+  };
+  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.emailDest) {
+    showToast('Completa todos los campos de EmailJS', 'error'); return;
+  }
+  saveEmailConfig2(cfg);
+  updateEmailConfigStatus();
+  showToast('Configuración de email guardada ✓');
+  closeEmailConfigModal();
+  // Limpiar historial de envíos para que la próxima revisión reenvíe si corresponde
+  localStorage.removeItem(EMAIL_SENT_KEY);
+}
+
+function updateEmailConfigStatus() {
+  const cfg = loadEmailConfig();
+  const icon = document.getElementById('emailStatusIcon');
+  const text = document.getElementById('emailStatusText');
+  const btn  = document.getElementById('emailConfigIcon');
+  if (cfg.publicKey && cfg.serviceId && cfg.templateId) {
+    if (icon) { icon.textContent = 'mark_email_read'; icon.style.color = 'var(--success)'; }
+    if (text) text.textContent   = `Activo → ${cfg.emailDest} · ${cfg.diasAviso} días anticipación`;
+    if (btn)  btn.style.color    = 'var(--success)';
+  } else {
+    if (icon) { icon.textContent = 'mail_outline'; icon.style.color = 'var(--text-muted)'; }
+    if (text) text.textContent   = 'Sin configurar';
+    if (btn)  btn.style.color    = '';
+  }
+}
+
+// ── Recolectar ítems próximos a vencer ────────────────────────────
+function getExpiringItems(diasAviso, cfg) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const limite = new Date(today); limite.setDate(limite.getDate() + diasAviso);
+  const todayStr  = today.toISOString().split('T')[0];
+  const limiteStr = limite.toISOString().split('T')[0];
+  const items = [];
+
+  function diasRestantes(fechaStr) {
+    if (!fechaStr) return null;
+    const d = new Date(fechaStr); d.setHours(0,0,0,0);
+    return Math.ceil((d - today) / (1000*60*60*24));
+  }
+
+  function enVentana(fechaStr) {
+    return fechaStr && fechaStr >= todayStr && fechaStr <= limiteStr;
+  }
+
+  // EPP
+  if (cfg.chkEPP !== false) {
+    loadEPP().filter(e => enVentana(e.vencimiento)).forEach(e => {
+      const dias = diasRestantes(e.vencimiento);
+      items.push({ modulo:'EPP', nombre:`${e.trabajador} — ${e.tipo}`, fecha: e.vencimiento, dias });
+    });
+  }
+
+  // Extintores
+  if (cfg.chkExtintores !== false) {
+    loadExtintores().filter(e => e.estado !== 'dado_baja' && enVentana(e.proximarecarga)).forEach(e => {
+      const dias = diasRestantes(e.proximarecarga);
+      items.push({ modulo:'Extintor', nombre:`${e.codigo} — ${e.ubicacion}`, fecha: e.proximarecarga, dias });
+    });
+  }
+
+  // Exámenes ocupacionales (módulo Personal)
+  if (cfg.chkExamenes !== false) {
+    loadPersonal().filter(p => enVentana(p.vencExamen)).forEach(p => {
+      const dias = diasRestantes(p.vencExamen);
+      items.push({ modulo:'Examen Ocup.', nombre:`${p.nombre} — ${p.cargo}`, fecha: p.vencExamen, dias });
+    });
+  }
+
+  // Control de Documentos
+  if (cfg.chkDocControl !== false) {
+    loadDocControl().filter(d => enVentana(d.revision)).forEach(d => {
+      const dias = diasRestantes(d.revision);
+      items.push({ modulo:'Doc. Control', nombre:`${d.nombre} v${d.version||'1.0'}`, fecha: d.revision, dias });
+    });
+  }
+
+  // Equipos y Compresores
+  if (cfg.chkEquipos !== false) {
+    loadEquipos().filter(e => e.estado !== 'fuera_servicio' && enVentana(e.proxMant)).forEach(e => {
+      const dias = diasRestantes(e.proxMant);
+      items.push({ modulo:'Equipo', nombre:`${e.nombre} — ${e.embarcacion||'Sin asignar'}`, fecha: e.proxMant, dias });
+    });
+  }
+
+  // Salud Ocupacional — exámenes
+  if (cfg.chkSalud !== false) {
+    loadSaludOcup().filter(s => enVentana(s.proxExamen)).forEach(s => {
+      const dias = diasRestantes(s.proxExamen);
+      items.push({ modulo:'Salud Ocup.', nombre:`${s.nombre} — Examen`, fecha: s.proxExamen, dias });
+    });
+    loadSaludOcup().filter(s => enVentana(s.hiperProx)).forEach(s => {
+      const dias = diasRestantes(s.hiperProx);
+      items.push({ modulo:'Hiperbaria', nombre:`${s.nombre} — Control Hiperbárico`, fecha: s.hiperProx, dias });
+    });
+  }
+
+  return items.sort((a, b) => (a.dias ?? 999) - (b.dias ?? 999));
+}
+
+// ── Enviar email vía EmailJS ───────────────────────────────────────
+function enviarEmailAlerta(cfg, items) {
+  if (!window.emailjs) { console.warn('EmailJS no cargado'); return; }
+
+  const hoy = new Date().toLocaleDateString('es-CL', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  // Construir tabla de ítems
+  const filas = items.map(it => {
+    const urgencia = it.dias <= 7 ? '🔴 URGENTE' : it.dias <= 15 ? '🟠 Pronto' : '🟡 Aviso';
+    return `${urgencia}  |  ${it.modulo}  |  ${it.nombre}  |  Vence: ${formatDate(it.fecha)}  (${it.dias} día${it.dias !== 1 ? 's' : ''})`;
+  }).join('\n');
+
+  const message = `Estimado Bastian,
+
+PrevRisk — Comercial Lafquen Ltda. detectó los siguientes documentos y vencimientos próximos al día de hoy, ${hoy}:
+
+─────────────────────────────────────────────────
+${filas}
+─────────────────────────────────────────────────
+
+Total de alertas: ${items.length}
+
+Ingresa a PrevRisk para gestionar estos vencimientos.
+
+Este mensaje fue generado automáticamente por PrevRisk.
+Prevencionista: Bastian Ancapán Vera`;
+
+  const subject = `⚠️ PrevRisk — ${items.length} vencimiento${items.length !== 1 ? 's' : ''} próximo${items.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('es-CL')}`;
+
+  try {
+    emailjs.init(cfg.publicKey);
+    emailjs.send(cfg.serviceId, cfg.templateId, {
+      to_email: cfg.emailDest,
+      subject,
+      message,
+    }).then(() => {
+      console.log('[PrevRisk] Email de alertas enviado a', cfg.emailDest);
+      showToast(`Email enviado a ${cfg.emailDest} ✓`);
+    }).catch(err => {
+      console.error('[PrevRisk] Error enviando email:', err);
+      showToast('Error al enviar email — revisa las credenciales', 'error');
+    });
+  } catch (e) {
+    console.error('[PrevRisk] EmailJS error:', e);
+  }
+}
+
+// ── Prueba manual ──────────────────────────────────────────────────
+function testEmailAlert() {
+  const cfg = loadEmailConfig();
+  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) {
+    showToast('Primero guarda la configuración de EmailJS', 'error'); return;
+  }
+  const items = getExpiringItems(cfg.diasAviso || 30, cfg);
+  if (!items.length) {
+    showToast('Sin vencimientos próximos en los próximos ' + (cfg.diasAviso || 30) + ' días', 'info');
+    return;
+  }
+  enviarEmailAlerta(cfg, items);
+}
+
+// ── Revisión automática diaria ─────────────────────────────────────
+function checkEmailAlertsDaily() {
+  const cfg = loadEmailConfig();
+  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) return;
+
+  const hoyStr   = new Date().toISOString().split('T')[0];
+  const horaActual = new Date().getHours();
+  const horaEnvio  = cfg.horaEnvio || 9;
+  const sentLog  = JSON.parse(localStorage.getItem(EMAIL_SENT_KEY) || '{}');
+
+  // Solo enviar una vez por día, a partir de la hora configurada
+  const clave = `email_${hoyStr}`;
+  if (sentLog[clave]) return;
+  if (horaActual < horaEnvio) return;
+
+  const items = getExpiringItems(cfg.diasAviso || 30, cfg);
+  if (!items.length) return;
+
+  // Marcar como enviado ANTES de enviar para no repetir si falla
+  sentLog[clave] = new Date().toISOString();
+  localStorage.setItem(EMAIL_SENT_KEY, JSON.stringify(sentLog));
+
+  enviarEmailAlerta(cfg, items);
+}
+
+// Iniciar revisión al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(checkEmailAlertsDaily, 4000); // 4s después del load
+  updateEmailConfigStatus();
+  const ov = document.getElementById('emailConfigModalOverlay');
+  if (ov) ov.addEventListener('click', e => { if (e.target === ov) closeEmailConfigModal(); });
+});
+
+// ================================================================
 function initNotificationBell(){const btn=document.getElementById('btnNotifBell'),dd=document.getElementById('notifDropdown');if(!btn||!dd)return;btn.addEventListener('click',e=>{e.stopPropagation();dd.style.display=dd.style.display==='block'?'none':'block';if(dd.style.display==='block')renderNotifList();});document.addEventListener('click',e=>{if(!btn.contains(e.target)&&!dd.contains(e.target))dd.style.display='none';});}
 function renderNotifList(){const list=document.getElementById('notifList'),badge=document.getElementById('notifBadge');if(!list)return;const today=new Date(),items=loadItems(),files=loadFilesMeta(),personal=loadPersonal(),alerts=[];const od=items.filter(i=>i.status!=='completada'&&i.dueDate&&new Date(i.dueDate)<today);if(od.length)alerts.push({icon:'warning',color:'var(--danger)',title:od.length+' tarea(s) vencidas',desc:od.slice(0,2).map(i=>i.title).join(', ')});const s30=new Date(today);s30.setDate(s30.getDate()+30);const ef=files.filter(f=>f.vencimiento&&new Date(f.vencimiento)>=today&&new Date(f.vencimiento)<=s30);if(ef.length)alerts.push({icon:'event_upcoming',color:'var(--warning)',title:ef.length+' documento(s) por vencer',desc:'Próximos 30 días'});const ep=personal.filter(p=>(p.vencExamen&&new Date(p.vencExamen)<today)||(p.vencMatricula&&new Date(p.vencMatricula)<today));if(ep.length)alerts.push({icon:'badge',color:'var(--warning)',title:ep.length+' trabajador(es) con docs vencidos',desc:ep.slice(0,2).map(p=>p.nombre).join(', ')});if(badge)badge.style.display=alerts.length?'block':'none';if(!alerts.length){list.innerHTML='<div style="padding:2rem 1.2rem;text-align:center;color:var(--text-muted);font-size:.85rem;">Sin alertas activas</div>';return;}list.innerHTML=alerts.map(a=>`<div style="padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;align-items:flex-start;"><span class="material-icons-round" style="color:${a.color};font-size:1.2rem;flex-shrink:0;">${a.icon}</span><div><div style="font-size:.82rem;font-weight:700;">${a.title}</div><div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${a.desc}</div></div></div>`).join('');}
