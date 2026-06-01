@@ -152,6 +152,7 @@
                     <a href="#" class="nav-sub-item" data-view="acc-nomina">Nómina Accidentes</a>
                     <a href="#" class="nav-sub-item" data-view="acc-procedimiento">Proc. ante Accidente</a>
                     <a href="#" class="nav-sub-item" data-view="acc-caso-gomez">Caso Juan Gómez</a>
+                    <a href="#" class="nav-sub-item" data-view="investigacion">Investigación Acc.</a>
                 </div>
             </div>
 
@@ -798,6 +799,75 @@
                 <table class="data-table">
                     <thead><tr><th>Trabajador</th><th>Fecha</th><th>Tipo</th><th>Gravedad</th><th>Área</th><th>Días Reposo</th><th>Estado</th><th>Acciones</th></tr></thead>
                     <tbody id="accidentesBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== MÓDULO 1: INVESTIGACIÓN DE ACCIDENTES ===== -->
+        <section class="view" id="view-investigacion">
+            <div class="view-header">
+                <div>
+                    <h2>Investigación de Accidentes</h2>
+                    <p class="view-subtitle">Árbol de causas, medidas correctivas y seguimiento — Comercial Lafquen Ltda.</p>
+                </div>
+                <div class="view-actions">
+                    <button class="btn-secondary" onclick="exportarPDF('investigacion')">
+                        <span class="material-icons-round">picture_as_pdf</span>
+                        <span>Exportar</span>
+                    </button>
+                    <button class="btn-primary" onclick="openInvModal()">
+                        <span class="material-icons-round">add</span>
+                        <span>Nueva Investigación</span>
+                    </button>
+                </div>
+            </div>
+            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
+                <div class="stat-card stat-pending">
+                    <div class="stat-icon"><span class="material-icons-round">folder_open</span></div>
+                    <div class="stat-info"><span class="stat-value" id="invStatTotal">0</span><span class="stat-label">Total Investigaciones</span></div>
+                </div>
+                <div class="stat-card stat-overdue">
+                    <div class="stat-icon"><span class="material-icons-round">report_problem</span></div>
+                    <div class="stat-info"><span class="stat-value" id="invStatAbiertas">0</span><span class="stat-label">Abiertas</span></div>
+                </div>
+                <div class="stat-card stat-progress">
+                    <div class="stat-icon"><span class="material-icons-round">pending_actions</span></div>
+                    <div class="stat-info"><span class="stat-value" id="invStatEnProceso">0</span><span class="stat-label">En Proceso</span></div>
+                </div>
+                <div class="stat-card stat-done">
+                    <div class="stat-icon"><span class="material-icons-round">task_alt</span></div>
+                    <div class="stat-info"><span class="stat-value" id="invStatCerradas">0</span><span class="stat-label">Cerradas</span></div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap">
+                <div class="filter-group" id="invFilterGroup">
+                    <button class="filter-btn active" data-filter="todas" onclick="setInvFilter('todas')">Todas</button>
+                    <button class="filter-btn" data-filter="abierto" onclick="setInvFilter('abierto')">Abiertas</button>
+                    <button class="filter-btn" data-filter="en_proceso" onclick="setInvFilter('en_proceso')">En Proceso</button>
+                    <button class="filter-btn" data-filter="cerrado" onclick="setInvFilter('cerrado')">Cerradas</button>
+                </div>
+                <div style="flex:1;max-width:340px;display:flex;align-items:center;gap:.5rem;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:0 .75rem">
+                    <span class="material-icons-round" style="color:var(--text-muted);font-size:1.1rem">search</span>
+                    <input type="text" id="invSearch" placeholder="Buscar trabajador, causa..." style="border:none;background:none;padding:.55rem 0;font-size:.84rem;width:100%" oninput="refreshInvestigacion()">
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>N°</th>
+                            <th>Trabajador</th>
+                            <th>Fecha Accidente</th>
+                            <th>Declaración</th>
+                            <th>Días Perdidos</th>
+                            <th>Medidas Pendientes</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invTableBody">
+                        <tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">No hay investigaciones registradas. Haz clic en "Nueva Investigación" para comenzar.</td></tr>
+                    </tbody>
                 </table>
             </div>
         </section>
@@ -1777,6 +1847,156 @@
           <button type="button" class="btn-secondary" id="fichaExamenCancel">Cerrar</button>
           <button type="button" class="btn-primary" id="fichaExamenSave">
             <span class="material-icons-round">save</span> Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL INVESTIGACIÓN DE ACCIDENTES ===== -->
+    <div class="modal-overlay" id="invModalOverlay">
+      <div class="modal modal-wide" id="invModal" style="max-width:780px">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(139,92,246,.08))">
+          <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--danger)">policy</span><span id="invModalTitle">Nueva Investigación de Accidente</span></h3>
+          <button class="btn-icon" onclick="closeInvModal()"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="invId">
+
+          <!-- Sección 1: Datos del evento -->
+          <div class="form-section-title">1. Datos del Evento</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Trabajador Accidentado</label>
+              <input type="text" id="invTrabajador" placeholder="Nombre completo">
+            </div>
+            <div class="form-group">
+              <label>Cargo</label>
+              <select id="invCargo">
+                <option value="">Seleccionar cargo...</option>
+                <option>Buzo Básico</option>
+                <option>Supervisor de Buceo</option>
+                <option>Patrón de Nave</option>
+                <option>Tripulante</option>
+                <option>Motorista</option>
+                <option>Cocinero</option>
+                <option>Operario</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Embarcación</label>
+              <select id="invEmbarcacion">
+                <option value="">Seleccionar...</option>
+                <option>María José</option>
+                <option>Alvarito</option>
+                <option>Aukan</option>
+                <option>Don Humberto</option>
+                <option>Lafquen</option>
+                <option>Tierra (faena en campo)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Fecha del Accidente</label>
+              <input type="date" id="invFechaAccidente">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Lugar del Accidente</label>
+              <input type="text" id="invLugar" placeholder="Ej: Cubierta proa, bodega de pesca...">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Declaración</label>
+              <select id="invTipoDeclaracion">
+                <option value="DIAT">DIAT (Accidente del Trabajo)</option>
+                <option value="DIEP">DIEP (Enfermedad Profesional)</option>
+                <option value="Ninguno">Sin Declaración</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Días Perdidos (reposo médico)</label>
+              <input type="number" id="invDiasPerdidos" min="0" value="0" placeholder="0">
+            </div>
+            <div class="form-group">
+              <label>Fecha de Investigación</label>
+              <input type="date" id="invFechaInvestigacion">
+            </div>
+          </div>
+
+          <!-- Sección 2: Descripción -->
+          <div class="form-section-title">2. Descripción del Accidente</div>
+          <div class="form-group">
+            <label>¿Cómo ocurrió el accidente? (descripción detallada)</label>
+            <textarea id="invDescripcion" rows="4" placeholder="Describa en detalle la secuencia de hechos que provocaron el accidente..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Parte del Cuerpo Afectada</label>
+              <input type="text" id="invParteAfectada" placeholder="Ej: Mano derecha, espalda...">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Lesión</label>
+              <input type="text" id="invTipoLesion" placeholder="Ej: Contusión, corte, fractura...">
+            </div>
+          </div>
+
+          <!-- Sección 3: Árbol de Causas -->
+          <div class="form-section-title">3. Árbol de Causas</div>
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:1rem;margin-bottom:.9rem;border-left:3px solid var(--danger)">
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--danger);margin-bottom:.5rem">Causa Inmediata — Acto y/o Condición Insegura</div>
+            <textarea id="invCausaInmediata" rows="2" placeholder="Ej: Trabajador no usaba guantes al manipular líneas, superficie de trabajo mojada y sin señalización..."></textarea>
+          </div>
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:1rem;margin-bottom:.9rem;border-left:3px solid var(--warning)">
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:.5rem">Causa Básica — Factores Personales y/o de Trabajo</div>
+            <textarea id="invCausaBasica" rows="2" placeholder="Ej: Falta de capacitación en uso de EPP, presión de producción, procedimiento no difundido al personal..."></textarea>
+          </div>
+          <div style="background:var(--bg-hover);border-radius:var(--radius-sm);padding:1rem;margin-bottom:.9rem;border-left:3px solid var(--accent)">
+            <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent-light);margin-bottom:.5rem">Causa Raíz — Falla en el Sistema de Gestión</div>
+            <textarea id="invCausaRaiz" rows="2" placeholder="Ej: Ausencia de programa de capacitación actualizado, falta de supervisión en el proceso..."></textarea>
+          </div>
+
+          <!-- Sección 4: Medidas Correctivas -->
+          <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>4. Medidas Correctivas</span>
+            <button type="button" onclick="invAgregarMedida()" style="background:var(--accent-glow);color:var(--accent-light);border:1px solid rgba(139,92,246,.25);border-radius:var(--radius-sm);padding:.28rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.25rem">
+              <span class="material-icons-round" style="font-size:.9rem">add</span> Agregar Medida
+            </button>
+          </div>
+          <div id="invMedidasContainer" style="display:flex;flex-direction:column;gap:.55rem;margin-bottom:.5rem">
+            <!-- medidas se renderizan aquí -->
+          </div>
+
+          <!-- Sección 5: Seguimiento -->
+          <div class="form-section-title">5. Estado y Seguimiento</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado de la Investigación</label>
+              <select id="invEstado">
+                <option value="abierto">Abierto</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="cerrado">Cerrado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Investigador</label>
+              <input type="text" id="invInvestigador" value="Bastian Ancapán Vera">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observaciones Adicionales</label>
+            <textarea id="invObservaciones" rows="2" placeholder="Notas adicionales, referencias a normativa, vínculos con otros casos..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeInvModal()">Cancelar</button>
+          <button type="button" class="btn-danger" id="invBtnDelete" style="display:none" onclick="deleteInvestigacion()">
+            <span class="material-icons-round">delete</span> Eliminar
+          </button>
+          <button type="button" class="btn-primary" onclick="saveInvestigacion()">
+            <span class="material-icons-round">save</span> Guardar Investigación
           </button>
         </div>
       </div>

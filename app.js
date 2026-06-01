@@ -652,6 +652,7 @@ function refreshAll() {
   if (typeof refreshAccidentes === 'function') refreshAccidentes();
   if (typeof refreshExtintores === 'function') refreshExtintores();
   if (typeof refreshEPP === 'function') refreshEPP();
+  if (typeof refreshInvestigacion === 'function' && document.getElementById('view-investigacion')?.classList.contains('active')) refreshInvestigacion();
 }
 
 let myStatusChart = null;
@@ -4542,5 +4543,296 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+// ================================================================
+// ===== MÓDULO 1: INVESTIGACIÓN DE ACCIDENTES =====
+// ================================================================
+
+const INV_KEY = 'prevrisk_investigaciones';
+let _invMedidas = [];
+let _invFilter = 'todas';
+
+function loadInvestigaciones() {
+  try { return JSON.parse(localStorage.getItem(INV_KEY)) || []; } catch { return []; }
+}
+function saveInvestigaciones(data) {
+  localStorage.setItem(INV_KEY, JSON.stringify(data));
+  cloudSave('store/investigaciones', data);
+}
+
+function refreshInvestigacion() {
+  const data = loadInvestigaciones();
+  const q = (document.getElementById('invSearch')?.value || '').toLowerCase().trim();
+  const filter = _invFilter;
+
+  const s = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  s('invStatTotal', data.length);
+  s('invStatAbiertas', data.filter(d => d.estado === 'abierto').length);
+  s('invStatEnProceso', data.filter(d => d.estado === 'en_proceso').length);
+  s('invStatCerradas', data.filter(d => d.estado === 'cerrado').length);
+
+  let filtered = data.filter(d => {
+    if (filter !== 'todas' && d.estado !== filter) return false;
+    if (q) {
+      const haystack = `${d.trabajador} ${d.cargo} ${d.causaRaiz} ${d.descripcion} ${d.lugar}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const tbody = document.getElementById('invTableBody');
+  if (!tbody) return;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--text-muted)">${data.length ? 'Sin resultados para el filtro seleccionado.' : 'No hay investigaciones registradas. Haz clic en "Nueva Investigación" para comenzar.'}</td></tr>`;
+    return;
+  }
+
+  const ec = {
+    abierto:   { bg:'rgba(239,68,68,.12)',  color:'var(--danger)',   label:'Abierto' },
+    en_proceso:{ bg:'rgba(56,189,248,.12)', color:'var(--info)',     label:'En Proceso' },
+    cerrado:   { bg:'rgba(34,197,94,.12)',  color:'var(--success)',  label:'Cerrado' }
+  };
+
+  tbody.innerHTML = filtered.map((inv, idx) => {
+    const e = ec[inv.estado] || ec.abierto;
+    const medidasPend = (inv.medidas || []).filter(m => m.estado !== 'cerrado').length;
+    const medidasTotal = (inv.medidas || []).length;
+    return `
+      <tr>
+        <td style="font-weight:700;color:var(--text-muted);font-size:.8rem">${String(idx+1).padStart(2,'0')}</td>
+        <td>
+          <div style="font-weight:700;font-size:.84rem">${inv.trabajador || '—'}</div>
+          <div style="font-size:.72rem;color:var(--text-muted)">${inv.cargo || ''}</div>
+        </td>
+        <td style="font-size:.82rem">${inv.fechaAccidente ? formatDate(inv.fechaAccidente) : '—'}</td>
+        <td><span style="background:rgba(139,92,246,.12);color:var(--accent-light);padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${inv.tipoDeclaracion || '—'}</span></td>
+        <td style="text-align:center;font-weight:700">${inv.diasPerdidos || 0}</td>
+        <td><span style="background:${medidasPend>0?'rgba(234,179,8,.12)':'rgba(34,197,94,.12)'};color:${medidasPend>0?'var(--warning)':'var(--success)'};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${medidasPend}/${medidasTotal} pend.</span></td>
+        <td><span style="background:${e.bg};color:${e.color};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${e.label}</span></td>
+        <td>
+          <div class="table-actions">
+            <button onclick="openInvModal('${inv.id}')" title="Editar"><span class="material-icons-round">edit</span></button>
+            <button onclick="abrirInvDetalle('${inv.id}')" title="Ver informe"><span class="material-icons-round">account_tree</span></button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function setInvFilter(filter) {
+  _invFilter = filter;
+  document.querySelectorAll('#invFilterGroup .filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  refreshInvestigacion();
+}
+
+function openInvModal(id = null) {
+  _invMedidas = [];
+  const overlay = document.getElementById('invModalOverlay');
+  if (!overlay) return;
+  const delBtn = document.getElementById('invBtnDelete');
+
+  if (id) {
+    const inv = loadInvestigaciones().find(i => i.id === id);
+    if (!inv) return;
+    const fields = ['trabajador','cargo','embarcacion','fechaAccidente','lugar','tipoDeclaracion',
+      'diasPerdidos','fechaInvestigacion','descripcion','parteAfectada','tipoLesion',
+      'causaInmediata','causaBasica','causaRaiz','estado','investigador','observaciones'];
+    fields.forEach(f => {
+      const el = document.getElementById('inv' + f.charAt(0).toUpperCase() + f.slice(1));
+      if (el) el.value = inv[f] !== undefined ? inv[f] : '';
+    });
+    document.getElementById('invId').value = inv.id;
+    _invMedidas = (inv.medidas || []).map(m => ({ ...m }));
+    if (delBtn) delBtn.style.display = 'block';
+    document.getElementById('invModalTitle').textContent = 'Editar Investigación';
+  } else {
+    ['invId','invTrabajador','invLugar','invDescripcion','invParteAfectada','invTipoLesion',
+     'invCausaInmediata','invCausaBasica','invCausaRaiz','invObservaciones'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const fecInv = document.getElementById('invFechaInvestigacion');
+    if (fecInv) fecInv.value = new Date().toISOString().split('T')[0];
+    const dias = document.getElementById('invDiasPerdidos'); if (dias) dias.value = '0';
+    const inv = document.getElementById('invInvestigador'); if (inv) inv.value = 'Bastian Ancapán Vera';
+    const est = document.getElementById('invEstado'); if (est) est.value = 'abierto';
+    const tip = document.getElementById('invTipoDeclaracion'); if (tip) tip.value = 'DIAT';
+    if (delBtn) delBtn.style.display = 'none';
+    document.getElementById('invModalTitle').textContent = 'Nueva Investigación de Accidente';
+  }
+
+  renderInvMedidas();
+  overlay.classList.add('active');
+}
+
+function closeInvModal() {
+  const overlay = document.getElementById('invModalOverlay');
+  if (overlay) overlay.classList.remove('active');
+  _invMedidas = [];
+}
+
+function renderInvMedidas() {
+  const container = document.getElementById('invMedidasContainer');
+  if (!container) return;
+  if (!_invMedidas.length) {
+    container.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:.82rem;border:1px dashed var(--border-strong);border-radius:var(--radius-sm)">Sin medidas correctivas. Haz clic en "Agregar Medida".</div>`;
+    return;
+  }
+  container.innerHTML = _invMedidas.map((m, i) => `
+    <div style="display:grid;grid-template-columns:1fr 110px 130px 108px 30px;gap:.4rem;align-items:center;background:var(--bg-hover);border-radius:var(--radius-sm);padding:.55rem .7rem;border:1px solid var(--border)">
+      <input type="text" value="${(m.descripcion||'').replace(/"/g,'&quot;')}" placeholder="Descripción de la medida..."
+        style="font-size:.81rem;border:none;background:transparent;color:var(--text);padding:0;min-width:0"
+        oninput="_invMedidas[${i}].descripcion=this.value">
+      <input type="text" value="${(m.responsable||'').replace(/"/g,'&quot;')}" placeholder="Responsable"
+        style="font-size:.78rem;border:none;background:transparent;color:var(--text);padding:0;text-align:center;min-width:0"
+        oninput="_invMedidas[${i}].responsable=this.value">
+      <input type="date" value="${m.plazo||''}"
+        style="font-size:.78rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px;min-width:0"
+        onchange="_invMedidas[${i}].plazo=this.value">
+      <select style="font-size:.76rem;border:1px solid var(--border);background:var(--bg-card);color:var(--text);padding:.2rem .35rem;border-radius:5px;min-width:0"
+        onchange="_invMedidas[${i}].estado=this.value">
+        <option value="pendiente" ${m.estado==='pendiente'?'selected':''}>Pendiente</option>
+        <option value="en_proceso" ${m.estado==='en_proceso'?'selected':''}>En Proceso</option>
+        <option value="cerrado" ${m.estado==='cerrado'?'selected':''}>Cerrada</option>
+      </select>
+      <button onclick="invEliminarMedida(${i})" style="background:rgba(239,68,68,.12);color:var(--danger);border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;display:grid;place-items:center;flex-shrink:0">
+        <span class="material-icons-round" style="font-size:.82rem">close</span>
+      </button>
+    </div>`).join('');
+}
+
+function invAgregarMedida() {
+  _invMedidas.push({ id: genId(), descripcion: '', responsable: '', plazo: '', estado: 'pendiente' });
+  renderInvMedidas();
+}
+
+function invEliminarMedida(idx) {
+  _invMedidas.splice(idx, 1);
+  renderInvMedidas();
+}
+
+function saveInvestigacion() {
+  const trabajador = document.getElementById('invTrabajador')?.value.trim();
+  if (!trabajador) { showToast('Ingresa el nombre del trabajador accidentado', 'error'); return; }
+  const id = document.getElementById('invId')?.value;
+  const data = loadInvestigaciones();
+  const isEdit = !!id;
+
+  const inv = {
+    id: id || genId(),
+    trabajador,
+    cargo: document.getElementById('invCargo')?.value || '',
+    embarcacion: document.getElementById('invEmbarcacion')?.value || '',
+    fechaAccidente: document.getElementById('invFechaAccidente')?.value || '',
+    lugar: document.getElementById('invLugar')?.value || '',
+    tipoDeclaracion: document.getElementById('invTipoDeclaracion')?.value || 'DIAT',
+    diasPerdidos: parseInt(document.getElementById('invDiasPerdidos')?.value) || 0,
+    fechaInvestigacion: document.getElementById('invFechaInvestigacion')?.value || '',
+    descripcion: document.getElementById('invDescripcion')?.value || '',
+    parteAfectada: document.getElementById('invParteAfectada')?.value || '',
+    tipoLesion: document.getElementById('invTipoLesion')?.value || '',
+    causaInmediata: document.getElementById('invCausaInmediata')?.value || '',
+    causaBasica: document.getElementById('invCausaBasica')?.value || '',
+    causaRaiz: document.getElementById('invCausaRaiz')?.value || '',
+    medidas: _invMedidas,
+    estado: document.getElementById('invEstado')?.value || 'abierto',
+    investigador: document.getElementById('invInvestigador')?.value || 'Bastian Ancapán Vera',
+    observaciones: document.getElementById('invObservaciones')?.value || '',
+    createdAt: isEdit ? (data.find(i=>i.id===id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (isEdit) {
+    const idx = data.findIndex(i => i.id === id);
+    if (idx !== -1) data[idx] = inv; else data.push(inv);
+  } else {
+    data.push(inv);
+  }
+
+  saveInvestigaciones(data);
+  addActivity(`Investigación ${isEdit?'actualizada':'registrada'}: <strong>${inv.trabajador}</strong> — ${inv.tipoDeclaracion}`);
+  showToast(`Investigación ${isEdit?'actualizada':'guardada'} correctamente ✓`);
+  closeInvModal();
+  refreshInvestigacion();
+}
+
+function deleteInvestigacion() {
+  const id = document.getElementById('invId')?.value;
+  if (!id || !confirm('¿Eliminar esta investigación? Esta acción no se puede deshacer.')) return;
+  saveInvestigaciones(loadInvestigaciones().filter(i => i.id !== id));
+  showToast('Investigación eliminada', 'error');
+  closeInvModal();
+  refreshInvestigacion();
+}
+
+function abrirInvDetalle(id) {
+  const inv = loadInvestigaciones().find(i => i.id === id);
+  if (!inv) return;
+  const hoy = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+  const ecL = {abierto:'ABIERTO',en_proceso:'EN PROCESO',cerrado:'CERRADO'};
+  const ecC = {abierto:'#ef4444',en_proceso:'#38bdf8',cerrado:'#22c55e'};
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Investigación — ${inv.trabajador}</title>
+  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.2rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.65rem}.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.fl{margin-bottom:.5rem}.fl-l{font-size:.7rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.fl-v{font-size:.87rem;font-weight:600;margin-top:.1rem}.cb{border-radius:8px;padding:.85rem 1rem;margin-bottom:.7rem}.ci{background:#fef2f2;border-left:4px solid #ef4444}.cb2{background:#fffbeb;border-left:4px solid #eab308}.cr{background:#f5f3ff;border-left:4px solid #8b5cf6}.cl{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}.ci .cl{color:#ef4444}.cb2 .cl{color:#d97706}.cr .cl{color:#7c3aed}.ct{font-size:.85rem;line-height:1.55}table{width:100%;border-collapse:collapse;font-size:.81rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.bdg{padding:.2rem .55rem;border-radius:6px;font-size:.68rem;font-weight:700}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Investigación de Accidente</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Folio:</strong> INV-${inv.id.slice(-6).toUpperCase()}</div><div><strong>Estado:</strong> <span style="color:${ecC[inv.estado]||'#888'};font-weight:800">${ecL[inv.estado]||inv.estado}</span></div><div><strong>Fecha:</strong> ${hoy}</div></div></div>
+  <div class="sec"><div class="sec-t">Datos del Evento</div><div class="g2"><div><div class="fl"><div class="fl-l">Trabajador</div><div class="fl-v">${inv.trabajador||'—'}</div></div><div class="fl"><div class="fl-l">Cargo</div><div class="fl-v">${inv.cargo||'—'}</div></div></div><div><div class="fl"><div class="fl-l">Embarcación</div><div class="fl-v">${inv.embarcacion||'—'}</div></div><div class="fl"><div class="fl-l">Fecha Accidente</div><div class="fl-v">${inv.fechaAccidente?formatDate(inv.fechaAccidente):'—'}</div></div></div></div><div class="g2"><div class="fl"><div class="fl-l">Lugar</div><div class="fl-v">${inv.lugar||'—'}</div></div><div class="fl"><div class="fl-l">Declaración / Días Perdidos</div><div class="fl-v">${inv.tipoDeclaracion||'—'} · ${inv.diasPerdidos||0} días</div></div></div></div>
+  <div class="sec"><div class="sec-t">Descripción del Accidente</div><p style="font-size:.86rem;line-height:1.6;margin:0">${inv.descripcion||'Sin descripción registrada.'}</p>${inv.parteAfectada||inv.tipoLesion?`<div class="g2" style="margin-top:.75rem"><div class="fl"><div class="fl-l">Parte Afectada</div><div class="fl-v">${inv.parteAfectada||'—'}</div></div><div class="fl"><div class="fl-l">Tipo de Lesión</div><div class="fl-v">${inv.tipoLesion||'—'}</div></div></div>`:''}</div>
+  <div class="sec"><div class="sec-t">Árbol de Causas</div><div class="cb ci"><div class="cl">Causa Inmediata — Acto / Condición Insegura</div><div class="ct">${inv.causaInmediata||'No registrada.'}</div></div><div class="cb cb2"><div class="cl">Causa Básica — Factores Personales / de Trabajo</div><div class="ct">${inv.causaBasica||'No registrada.'}</div></div><div class="cb cr"><div class="cl">Causa Raíz — Falla en el Sistema de Gestión</div><div class="ct">${inv.causaRaiz||'No registrada.'}</div></div></div>
+  ${inv.medidas&&inv.medidas.length?`<div class="sec"><div class="sec-t">Medidas Correctivas</div><table><thead><tr><th>#</th><th>Descripción</th><th>Responsable</th><th>Plazo</th><th>Estado</th></tr></thead><tbody>${inv.medidas.map((m,i)=>{const s={pendiente:{bg:'#fef9c3',c:'#854d0e'},en_proceso:{bg:'#e0f2fe',c:'#0369a1'},cerrado:{bg:'#dcfce7',c:'#166534'}}[m.estado]||{bg:'#fef9c3',c:'#854d0e'};return`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td style="font-weight:700;color:#999">${i+1}</td><td>${m.descripcion||'—'}</td><td>${m.responsable||'—'}</td><td>${m.plazo?formatDate(m.plazo):'—'}</td><td><span class="bdg" style="background:${s.bg};color:${s.c}">${(m.estado||'').replace('_',' ').toUpperCase()}</span></td></tr>`;}).join('')}</tbody></table></div>`:''}
+  <div style="display:flex;justify-content:space-around;margin-top:2.5rem;padding-top:1.5rem;border-top:1px dashed #ddd"><div style="text-align:center"><div style="border-top:1px solid #000;padding-top:.4rem;width:200px;margin:0 auto;font-size:.8rem;color:#555">${inv.investigador||'Bastian Ancapán Vera'}<br><small>Prevencionista de Riesgos</small></div></div><div style="text-align:center"><div style="border-top:1px solid #000;padding-top:.4rem;width:200px;margin:0 auto;font-size:.8rem;color:#555">${inv.trabajador||''}<br><small>Trabajador Accidentado</small></div></div></div>
+  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Confidencial — Comercial Lafquen Ltda.</div>
+  </body></html>`;
+  const win = window.open('','_blank','width=900,height=700');
+  if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
+}
+
+// Exportar PDF lista completa
+const _origExportarPDF_inv = exportarPDF;
+exportarPDF = function(modulo) {
+  if (modulo !== 'investigacion') return _origExportarPDF_inv.apply(this, arguments);
+  const hoy = new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
+  const data = loadInvestigaciones();
+  const ecC = {abierto:'#ef4444',en_proceso:'#38bdf8',cerrado:'#22c55e'};
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Registro Investigaciones</title>
+  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style>
+  </head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Investigaciones de Accidentes</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Fecha:</strong> ${hoy}</div><div><strong>Total:</strong> ${data.length} registros</div></div></div>
+  ${data.length===0?'<p style="text-align:center;color:#888;padding:2rem">Sin investigaciones registradas.</p>':`<table><thead><tr><th>#</th><th>Trabajador</th><th>Cargo</th><th>Embarcación</th><th>Fecha Acc.</th><th>Declaración</th><th>Días</th><th>Medidas Pend.</th><th>Estado</th></tr></thead><tbody>${data.map((inv,i)=>{const pend=(inv.medidas||[]).filter(m=>m.estado!=='cerrado').length;return`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td style="font-weight:700;color:#999">${i+1}</td><td><strong>${inv.trabajador||'—'}</strong></td><td>${inv.cargo||'—'}</td><td>${inv.embarcacion||'—'}</td><td>${inv.fechaAccidente?formatDate(inv.fechaAccidente):'—'}</td><td>${inv.tipoDeclaracion||'—'}</td><td style="text-align:center">${inv.diasPerdidos||0}</td><td style="text-align:center">${pend}</td><td><span style="color:${ecC[inv.estado]||'#888'};font-weight:700;text-transform:uppercase;font-size:.75rem">${(inv.estado||'').replace('_',' ')}</span></td></tr>`;}).join('')}</tbody></table>`}
+  <div class="footer">Generado por PrevRisk · ${hoy} · Confidencial</div>
+  </body></html>`;
+  const win = window.open('','_blank','width=900,height=700');
+  if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
+};
+
+// Integración alertas campanita
+const _origRenderNotif_inv = renderNotifList;
+renderNotifList = function() {
+  _origRenderNotif_inv.apply(this, arguments);
+  const list = document.getElementById('notifList');
+  const badge = document.getElementById('notifBadge');
+  if (!list) return;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const venc = [];
+  loadInvestigaciones().forEach(inv => {
+    if (inv.estado === 'cerrado') return;
+    (inv.medidas||[]).forEach(m => {
+      if (m.estado !== 'cerrado' && m.plazo && m.plazo < todayStr) venc.push({ inv: inv.trabajador, desc: m.descripcion });
+    });
+  });
+  if (!venc.length) return;
+  const entry = document.createElement('div');
+  entry.style.cssText = 'padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;align-items:flex-start;';
+  entry.innerHTML = `<span class="material-icons-round" style="color:var(--danger);font-size:1.2rem;flex-shrink:0;">policy</span><div><div style="font-size:.82rem;font-weight:700;">${venc.length} medida(s) correctiva(s) vencidas</div><div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${venc.slice(0,2).map(v=>`${v.inv}: ${(v.desc||'').slice(0,35)}`).join(' | ')}</div></div>`;
+  list.insertBefore(entry, list.firstChild);
+  if (badge) badge.style.display = 'block';
+};
+
+// Cierre modal al click fuera
+document.addEventListener('DOMContentLoaded', () => {
+  const ov = document.getElementById('invModalOverlay');
+  if (ov) ov.addEventListener('click', e => { if (e.target === ov) closeInvModal(); });
+});
+
+// ================================================================
 function initNotificationBell(){const btn=document.getElementById('btnNotifBell'),dd=document.getElementById('notifDropdown');if(!btn||!dd)return;btn.addEventListener('click',e=>{e.stopPropagation();dd.style.display=dd.style.display==='block'?'none':'block';if(dd.style.display==='block')renderNotifList();});document.addEventListener('click',e=>{if(!btn.contains(e.target)&&!dd.contains(e.target))dd.style.display='none';});}
 function renderNotifList(){const list=document.getElementById('notifList'),badge=document.getElementById('notifBadge');if(!list)return;const today=new Date(),items=loadItems(),files=loadFilesMeta(),personal=loadPersonal(),alerts=[];const od=items.filter(i=>i.status!=='completada'&&i.dueDate&&new Date(i.dueDate)<today);if(od.length)alerts.push({icon:'warning',color:'var(--danger)',title:od.length+' tarea(s) vencidas',desc:od.slice(0,2).map(i=>i.title).join(', ')});const s30=new Date(today);s30.setDate(s30.getDate()+30);const ef=files.filter(f=>f.vencimiento&&new Date(f.vencimiento)>=today&&new Date(f.vencimiento)<=s30);if(ef.length)alerts.push({icon:'event_upcoming',color:'var(--warning)',title:ef.length+' documento(s) por vencer',desc:'Próximos 30 días'});const ep=personal.filter(p=>(p.vencExamen&&new Date(p.vencExamen)<today)||(p.vencMatricula&&new Date(p.vencMatricula)<today));if(ep.length)alerts.push({icon:'badge',color:'var(--warning)',title:ep.length+' trabajador(es) con docs vencidos',desc:ep.slice(0,2).map(p=>p.nombre).join(', ')});if(badge)badge.style.display=alerts.length?'block':'none';if(!alerts.length){list.innerHTML='<div style="padding:2rem 1.2rem;text-align:center;color:var(--text-muted);font-size:.85rem;">Sin alertas activas</div>';return;}list.innerHTML=alerts.map(a=>`<div style="padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;gap:.75rem;align-items:flex-start;"><span class="material-icons-round" style="color:${a.color};font-size:1.2rem;flex-shrink:0;">${a.icon}</span><div><div style="font-size:.82rem;font-weight:700;">${a.title}</div><div style="font-size:.72rem;color:var(--text-secondary);margin-top:.1rem;">${a.desc}</div></div></div>`).join('');}
