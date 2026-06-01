@@ -594,7 +594,7 @@ details.collapsible-panel .expand-icon { transition:transform .3s ease; }
 details.collapsible-panel[open] .expand-icon { transform:rotate(180deg); }
 
 /* ===== Login ===== */
-#loginOverlay { backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); background:rgba(9,9,11,.9); }
+#loginOverlay { background:#09090b; }
 #loginOverlay .modal { border:1px solid var(--border-strong); box-shadow:var(--shadow), 0 0 60px rgba(37,99,235,.1); }
 
 /* ===== Misc ===== */
