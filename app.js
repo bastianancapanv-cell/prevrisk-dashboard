@@ -5768,6 +5768,19 @@ function checkEmailAlertsDaily() {
 
 // Iniciar revisión al cargar
 document.addEventListener('DOMContentLoaded', () => {
+  // Pre-cargar credenciales EmailJS si no hay config guardada
+  if (!loadEmailConfig().publicKey) {
+    saveEmailConfig2({
+      publicKey:  'bhD17qH6lmgNxptzu',
+      serviceId:  'service_8zp4jcu',
+      templateId: 'template_6t10h9q',
+      emailDest:  'bastianancapanv@gmail.com',
+      diasAviso:  30,
+      horaEnvio:  9,
+      chkEPP: true, chkExtintores: true, chkExamenes: true,
+      chkDocControl: true, chkEquipos: true, chkSalud: true
+    });
+  }
   setTimeout(checkEmailAlertsDaily, 4000); // 4s después del load
   updateEmailConfigStatus();
   const ov = document.getElementById('emailConfigModalOverlay');
