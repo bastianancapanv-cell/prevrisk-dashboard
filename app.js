@@ -37,7 +37,7 @@ function saveFilesMeta(meta) {
 }
 
 let _cst=null;
-function setCloudStatus(s){const el=document.getElementById('cloudIndicator'),ic=document.getElementById('cloudIcon');if(!el)return;const m={syncing:{color:'var(--accent)',border:'rgba(139,92,246,.3)',icon:'cloud_upload'},error:{color:'var(--danger)',border:'rgba(239,68,68,.3)',icon:'cloud_off'},synced:{color:'var(--success)',border:'rgba(34,197,94,.3)',icon:'cloud_done'}};const d=m[s]||m.synced;el.style.color=d.color;el.style.borderColor=d.border;if(ic){ic.textContent=d.icon;ic.style.animation=s==='syncing'?'spin .8s linear infinite':'';el.title=s==='syncing'?'Sincronizando...':s==='error'?'Sin conexión — cambios guardados localmente':'Sincronizado con la nube';}}
+function setCloudStatus(s){const el=document.getElementById('cloudIndicator'),ic=document.getElementById('cloudIcon');if(!el)return;const m={syncing:{color:'var(--accent)',border:'rgba(37,99,235,.3)',icon:'cloud_upload'},error:{color:'var(--danger)',border:'rgba(239,68,68,.3)',icon:'cloud_off'},synced:{color:'var(--success)',border:'rgba(34,197,94,.3)',icon:'cloud_done'}};const d=m[s]||m.synced;el.style.color=d.color;el.style.borderColor=d.border;if(ic){ic.textContent=d.icon;ic.style.animation=s==='syncing'?'spin .8s linear infinite':'';el.title=s==='syncing'?'Sincronizando...':s==='error'?'Sin conexión — cambios guardados localmente':'Sincronizado con la nube';}}
 function cloudSave(docPath,data){setCloudStatus('syncing');clearTimeout(_cst);firestore.doc(docPath).set({data:JSON.parse(JSON.stringify(data)),updatedAt:new Date().toISOString()}).then(()=>{_cst=setTimeout(()=>setCloudStatus('synced'),800);}).catch(e=>{console.warn('Cloud save error:',e);setCloudStatus('error');});}
 
 function loadItems() {
@@ -334,7 +334,7 @@ if (btnExportExcel) {
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
     const today = new Date().toISOString().split('T')[0];
-    link.setAttribute('download', `Reporte_PrevRisk_${today}.csv`);
+    link.setAttribute('download', `Reporte_briza_${today}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -694,7 +694,7 @@ function refreshDashboard(items) {
         datasets: [{
           label: 'Total',
           data: [tareas, capacitaciones, documentos],
-          backgroundColor: ['#8b5cf6', '#22c55e', '#38bdf8'],
+          backgroundColor: ['#2563eb', '#22c55e', '#38bdf8'],
           borderRadius: 4
         }]
       },
@@ -2443,14 +2443,14 @@ function checkDailyAlerts() {
     
     // Request notification permission
     if (Notification.permission === 'granted') {
-      new Notification('PrevRisk - Alertas del Día', {
+      new Notification('briza - Alertas del Día', {
         body: `Tienes ${alerts.length} alertas pendientes de revisar.`,
         icon: 'icon-192.png'
       });
     } else if (Notification.permission !== 'denied') {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
-          new Notification('PrevRisk - Notificaciones activadas', { body: 'Te avisaremos de vencimientos por aquí.' });
+          new Notification('briza - Notificaciones activadas', { body: 'Te avisaremos de vencimientos por aquí.' });
         }
       });
     }
@@ -2641,7 +2641,7 @@ function seedPersonalReal() {
     return prev ? { ...real, notas: prev.notas || real.notas, driveUrl: prev.driveUrl||'', driveDesc: prev.driveDesc||'' } : real;
   });
   savePersonal(merged);
-  console.log('[PrevRisk] Personal sincronizado: ' + merged.length + ' trabajadores');
+  console.log('[briza] Personal sincronizado: ' + merged.length + ' trabajadores');
 }
 
 // ===== Info Modal =====
@@ -2751,8 +2751,8 @@ async function init(){
     localStorage.removeItem(STORAGE_KEY);
     localStorage.setItem('prevrisk_demo_cleared_v1', '1');
   }
-  try{await openDB();await Promise.race([syncFromCloud(),new Promise(r=>setTimeout(r,3000))]);seedDiveDemoData();seedPersonalReal();refreshAll();setupRealtimeSync();setTimeout(checkDailyAlerts,1200);clearTimeout(lt);hideLoader();if(typeof initNotificationBell==='function')initNotificationBell();console.log('[PrevRisk V2] OK');}
-  catch(err){console.warn('[PrevRisk]',err);if(!localStorage.getItem('prevrisk_demo_cleared_v1')){localStorage.removeItem(STORAGE_KEY);localStorage.setItem('prevrisk_demo_cleared_v1','1');}seedDiveDemoData();seedPersonalReal();refreshAll();clearTimeout(lt);hideLoader();if(typeof initNotificationBell==='function')initNotificationBell();}
+  try{await openDB();await Promise.race([syncFromCloud(),new Promise(r=>setTimeout(r,3000))]);seedDiveDemoData();seedPersonalReal();refreshAll();setupRealtimeSync();setTimeout(checkDailyAlerts,1200);clearTimeout(lt);hideLoader();if(typeof initNotificationBell==='function')initNotificationBell();console.log('[briza V2] OK');}
+  catch(err){console.warn('[briza]',err);if(!localStorage.getItem('prevrisk_demo_cleared_v1')){localStorage.removeItem(STORAGE_KEY);localStorage.setItem('prevrisk_demo_cleared_v1','1');}seedDiveDemoData();seedPersonalReal();refreshAll();clearTimeout(lt);hideLoader();if(typeof initNotificationBell==='function')initNotificationBell();}
 }
 init();
 
@@ -3470,7 +3470,7 @@ function renderTrendChart() {
     data: {
       labels: months,
       datasets: [
-        { label: 'Creadas', data: createdData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.12)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+        { label: 'Creadas', data: createdData, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.12)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#2563eb' },
         { label: 'Completadas', data: completedData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.1)', tension: .4, fill: true, pointRadius: 4, pointBackgroundColor: '#22c55e' }
       ]
     },
@@ -3539,7 +3539,7 @@ function loadGantt() { try { return JSON.parse(localStorage.getItem(GANTT_KEY)) 
 function saveGantt(data) { localStorage.setItem(GANTT_KEY, JSON.stringify(data)); cloudSave('store/gantt', data); }
 
 const GANTT_COLORS = {
-  capacitacion: '#8b5cf6', inspeccion: '#eab308', documento: '#38bdf8',
+  capacitacion: '#2563eb', inspeccion: '#eab308', documento: '#38bdf8',
   auditoria: '#a855f7', simulacro: '#ef4444', reunion: '#22c55e', otro: '#71717a'
 };
 const GANTT_LABELS = {
@@ -3711,7 +3711,7 @@ document.getElementById('btnExportGantt')?.addEventListener('click', () => {
   });
   const a = document.createElement('a');
   a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-  a.download = `Gantt_PrevRisk_${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = `Gantt_briza_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   showToast('Gantt exportado');
 });
@@ -4077,7 +4077,7 @@ function activarNotificaciones() {
     if (perm === 'granted') {
       showToast('¡Notificaciones activadas! 🔔');
       updateNotifStatus();
-      enviarNotificacionPush('PrevRisk', '¡Notificaciones activadas! Te avisaremos de vencimientos importantes.', 'icon-192.png');
+      enviarNotificacionPush('briza', '¡Notificaciones activadas! Te avisaremos de vencimientos importantes.', 'icon-192.png');
       programarNotificaciones();
     } else {
       showToast('Notificaciones denegadas', 'error');
@@ -4171,7 +4171,7 @@ function exportarPDF(modulo) {
       const completadas = items.filter(i => i.status==='completada').length;
       const vencidas = items.filter(i => i.status!=='completada' && i.dueDate && i.dueDate < today).length;
       const cumplimiento = items.length > 0 ? Math.round(completadas/items.length*100) : 0;
-      titulo = 'Reporte General PrevRisk';
+      titulo = 'Reporte General briza';
       contenido = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
           ${[['Pendientes',pendientes,'#eab308'],['En Progreso',progreso,'#38bdf8'],['Completadas',completadas,'#22c55e'],['Vencidas',vencidas,'#ef4444']].map(([l,v,c])=>`
@@ -4181,7 +4181,7 @@ function exportarPDF(modulo) {
           </div>`).join('')}
         </div>
         <div style="background:#f0f3fb;border-radius:10px;padding:1rem;text-align:center;margin-bottom:1.5rem">
-          <div style="font-size:2.5rem;font-weight:900;color:#8b5cf6">${cumplimiento}%</div>
+          <div style="font-size:2.5rem;font-weight:900;color:#2563eb">${cumplimiento}%</div>
           <div style="font-size:.85rem;color:#555">Cumplimiento General</div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:.82rem">
@@ -4227,9 +4227,9 @@ function exportarPDF(modulo) {
     <style>
       body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 2rem; color: #1a1d27; background: #fff; }
       h1 { font-size: 1.4rem; font-weight: 800; color: #1a1d27; margin: 0; }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #8b5cf6; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2563eb; padding-bottom: 1rem; margin-bottom: 1.5rem; }
       .logo { display: flex; align-items: center; gap: .6rem; }
-      .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 1rem; }
+      .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #2563eb, #3b82f6); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 1rem; }
       .meta { text-align: right; font-size: .75rem; color: #666; }
       .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; text-align: center; font-size: .7rem; color: #888; }
       @media print { body { padding: 1rem; } }
@@ -4240,7 +4240,7 @@ function exportarPDF(modulo) {
         <div class="logo-icon">PR</div>
         <div>
           <h1>${titulo}</h1>
-          <div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Panel de Prevención de Riesgos</div>
+          <div style="font-size:.75rem;color:#666;margin-top:.15rem">briza — Panel de Prevención de Riesgos</div>
         </div>
       </div>
       <div class="meta">
@@ -4250,7 +4250,7 @@ function exportarPDF(modulo) {
       </div>
     </div>
     ${contenido}
-    <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Confidencial</div>
+    <div class="footer">Documento generado automáticamente por briza · ${hoy} · Confidencial</div>
   </body></html>`;
 
   const win = window.open('', '_blank', 'width=900,height=700');
@@ -4559,7 +4559,7 @@ function refreshInvestigacion() {
           <div style="font-size:.72rem;color:var(--text-muted)">${inv.cargo || ''}</div>
         </td>
         <td style="font-size:.82rem">${inv.fechaAccidente ? formatDate(inv.fechaAccidente) : '—'}</td>
-        <td><span style="background:rgba(139,92,246,.12);color:var(--accent-light);padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${inv.tipoDeclaracion || '—'}</span></td>
+        <td><span style="background:rgba(37,99,235,.12);color:var(--accent-light);padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${inv.tipoDeclaracion || '—'}</span></td>
         <td style="text-align:center;font-weight:700">${inv.diasPerdidos || 0}</td>
         <td><span style="background:${medidasPend>0?'rgba(234,179,8,.12)':'rgba(34,197,94,.12)'};color:${medidasPend>0?'var(--warning)':'var(--success)'};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${medidasPend}/${medidasTotal} pend.</span></td>
         <td><span style="background:${e.bg};color:${e.color};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${e.label}</span></td>
@@ -4727,14 +4727,14 @@ function abrirInvDetalle(id) {
   const ecL = {abierto:'ABIERTO',en_proceso:'EN PROCESO',cerrado:'CERRADO'};
   const ecC = {abierto:'#ef4444',en_proceso:'#38bdf8',cerrado:'#22c55e'};
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Investigación — ${inv.trabajador}</title>
-  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.2rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.65rem}.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.fl{margin-bottom:.5rem}.fl-l{font-size:.7rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.fl-v{font-size:.87rem;font-weight:600;margin-top:.1rem}.cb{border-radius:8px;padding:.85rem 1rem;margin-bottom:.7rem}.ci{background:#fef2f2;border-left:4px solid #ef4444}.cb2{background:#fffbeb;border-left:4px solid #eab308}.cr{background:#f5f3ff;border-left:4px solid #8b5cf6}.cl{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}.ci .cl{color:#ef4444}.cb2 .cl{color:#d97706}.cr .cl{color:#7c3aed}.ct{font-size:.85rem;line-height:1.55}table{width:100%;border-collapse:collapse;font-size:.81rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.bdg{padding:.2rem .55rem;border-radius:6px;font-size:.68rem;font-weight:700}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
-  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Investigación de Accidente</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Folio:</strong> INV-${inv.id.slice(-6).toUpperCase()}</div><div><strong>Estado:</strong> <span style="color:${ecC[inv.estado]||'#888'};font-weight:800">${ecL[inv.estado]||inv.estado}</span></div><div><strong>Fecha:</strong> ${hoy}</div></div></div>
+  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.2rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.65rem}.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.fl{margin-bottom:.5rem}.fl-l{font-size:.7rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.fl-v{font-size:.87rem;font-weight:600;margin-top:.1rem}.cb{border-radius:8px;padding:.85rem 1rem;margin-bottom:.7rem}.ci{background:#fef2f2;border-left:4px solid #ef4444}.cb2{background:#fffbeb;border-left:4px solid #eab308}.cr{background:#f5f3ff;border-left:4px solid #2563eb}.cl{font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}.ci .cl{color:#ef4444}.cb2 .cl{color:#d97706}.cr .cl{color:#7c3aed}.ct{font-size:.85rem;line-height:1.55}table{width:100%;border-collapse:collapse;font-size:.81rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.bdg{padding:.2rem .55rem;border-radius:6px;font-size:.68rem;font-weight:700}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Investigación de Accidente</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">briza — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Folio:</strong> INV-${inv.id.slice(-6).toUpperCase()}</div><div><strong>Estado:</strong> <span style="color:${ecC[inv.estado]||'#888'};font-weight:800">${ecL[inv.estado]||inv.estado}</span></div><div><strong>Fecha:</strong> ${hoy}</div></div></div>
   <div class="sec"><div class="sec-t">Datos del Evento</div><div class="g2"><div><div class="fl"><div class="fl-l">Trabajador</div><div class="fl-v">${inv.trabajador||'—'}</div></div><div class="fl"><div class="fl-l">Cargo</div><div class="fl-v">${inv.cargo||'—'}</div></div></div><div><div class="fl"><div class="fl-l">Embarcación</div><div class="fl-v">${inv.embarcacion||'—'}</div></div><div class="fl"><div class="fl-l">Fecha Accidente</div><div class="fl-v">${inv.fechaAccidente?formatDate(inv.fechaAccidente):'—'}</div></div></div></div><div class="g2"><div class="fl"><div class="fl-l">Lugar</div><div class="fl-v">${inv.lugar||'—'}</div></div><div class="fl"><div class="fl-l">Declaración / Días Perdidos</div><div class="fl-v">${inv.tipoDeclaracion||'—'} · ${inv.diasPerdidos||0} días</div></div></div></div>
   <div class="sec"><div class="sec-t">Descripción del Accidente</div><p style="font-size:.86rem;line-height:1.6;margin:0">${inv.descripcion||'Sin descripción registrada.'}</p>${inv.parteAfectada||inv.tipoLesion?`<div class="g2" style="margin-top:.75rem"><div class="fl"><div class="fl-l">Parte Afectada</div><div class="fl-v">${inv.parteAfectada||'—'}</div></div><div class="fl"><div class="fl-l">Tipo de Lesión</div><div class="fl-v">${inv.tipoLesion||'—'}</div></div></div>`:''}</div>
   <div class="sec"><div class="sec-t">Árbol de Causas</div><div class="cb ci"><div class="cl">Causa Inmediata — Acto / Condición Insegura</div><div class="ct">${inv.causaInmediata||'No registrada.'}</div></div><div class="cb cb2"><div class="cl">Causa Básica — Factores Personales / de Trabajo</div><div class="ct">${inv.causaBasica||'No registrada.'}</div></div><div class="cb cr"><div class="cl">Causa Raíz — Falla en el Sistema de Gestión</div><div class="ct">${inv.causaRaiz||'No registrada.'}</div></div></div>
   ${inv.medidas&&inv.medidas.length?`<div class="sec"><div class="sec-t">Medidas Correctivas</div><table><thead><tr><th>#</th><th>Descripción</th><th>Responsable</th><th>Plazo</th><th>Estado</th></tr></thead><tbody>${inv.medidas.map((m,i)=>{const s={pendiente:{bg:'#fef9c3',c:'#854d0e'},en_proceso:{bg:'#e0f2fe',c:'#0369a1'},cerrado:{bg:'#dcfce7',c:'#166534'}}[m.estado]||{bg:'#fef9c3',c:'#854d0e'};return`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td style="font-weight:700;color:#999">${i+1}</td><td>${m.descripcion||'—'}</td><td>${m.responsable||'—'}</td><td>${m.plazo?formatDate(m.plazo):'—'}</td><td><span class="bdg" style="background:${s.bg};color:${s.c}">${(m.estado||'').replace('_',' ').toUpperCase()}</span></td></tr>`;}).join('')}</tbody></table></div>`:''}
   <div style="display:flex;justify-content:space-around;margin-top:2.5rem;padding-top:1.5rem;border-top:1px dashed #ddd"><div style="text-align:center"><div style="border-top:1px solid #000;padding-top:.4rem;width:200px;margin:0 auto;font-size:.8rem;color:#555">${inv.investigador||'Bastian Ancapán Vera'}<br><small>Prevencionista de Riesgos</small></div></div><div style="text-align:center"><div style="border-top:1px solid #000;padding-top:.4rem;width:200px;margin:0 auto;font-size:.8rem;color:#555">${inv.trabajador||''}<br><small>Trabajador Accidentado</small></div></div></div>
-  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Confidencial — Comercial Lafquen Ltda.</div>
+  <div class="footer">Documento generado automáticamente por briza · ${hoy} · Confidencial — Comercial Lafquen Ltda.</div>
   </body></html>`;
   const win = window.open('','_blank','width=900,height=700');
   if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
@@ -4748,11 +4748,11 @@ exportarPDF = function(modulo) {
   const data = loadInvestigaciones();
   const ecC = {abierto:'#ef4444',en_proceso:'#38bdf8',cerrado:'#22c55e'};
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Registro Investigaciones</title>
-  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style>
+  <style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;color:#555;font-size:.69rem;text-transform:uppercase;border-bottom:2px solid #ddd}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style>
   </head><body>
-  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Investigaciones de Accidentes</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Fecha:</strong> ${hoy}</div><div><strong>Total:</strong> ${data.length} registros</div></div></div>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Investigaciones de Accidentes</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">briza — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div><strong>Fecha:</strong> ${hoy}</div><div><strong>Total:</strong> ${data.length} registros</div></div></div>
   ${data.length===0?'<p style="text-align:center;color:#888;padding:2rem">Sin investigaciones registradas.</p>':`<table><thead><tr><th>#</th><th>Trabajador</th><th>Cargo</th><th>Embarcación</th><th>Fecha Acc.</th><th>Declaración</th><th>Días</th><th>Medidas Pend.</th><th>Estado</th></tr></thead><tbody>${data.map((inv,i)=>{const pend=(inv.medidas||[]).filter(m=>m.estado!=='cerrado').length;return`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td style="font-weight:700;color:#999">${i+1}</td><td><strong>${inv.trabajador||'—'}</strong></td><td>${inv.cargo||'—'}</td><td>${inv.embarcacion||'—'}</td><td>${inv.fechaAccidente?formatDate(inv.fechaAccidente):'—'}</td><td>${inv.tipoDeclaracion||'—'}</td><td style="text-align:center">${inv.diasPerdidos||0}</td><td style="text-align:center">${pend}</td><td><span style="color:${ecC[inv.estado]||'#888'};font-weight:700;text-transform:uppercase;font-size:.75rem">${(inv.estado||'').replace('_',' ')}</span></td></tr>`;}).join('')}</tbody></table>`}
-  <div class="footer">Generado por PrevRisk · ${hoy} · Confidencial</div>
+  <div class="footer">Generado por briza · ${hoy} · Confidencial</div>
   </body></html>`;
   const win = window.open('','_blank','width=900,height=700');
   if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),500); }
@@ -4947,8 +4947,8 @@ function deletePTS(){
 function imprimirPTS(id){
   const p=loadPTS().find(i=>i.id===id); if(!p)return;
   const hoy=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>PTS — ${p.nombre}</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.1rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.6rem}.box{background:#f5f3ff;border-left:4px solid #8b5cf6;border-radius:8px;padding:.85rem 1rem;margin-bottom:.5rem;font-size:.85rem;line-height:1.55}ol li{margin-bottom:.4rem;font-size:.85rem}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.5rem .7rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.45rem .7rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
-  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>${p.nombre}</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Versión: <strong>${p.version||'v1.0'}</strong></div><div>Fecha: <strong>${p.fecha?formatDate(p.fecha):hoy}</strong></div><div>Actividad: <strong>${p.actividad||'—'}</strong></div></div></div>
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>PTS — ${p.nombre}</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.3rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.sec{margin-bottom:1.1rem}.sec-t{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:#666;border-bottom:1px solid #eee;padding-bottom:.3rem;margin-bottom:.6rem}.box{background:#f5f3ff;border-left:4px solid #2563eb;border-radius:8px;padding:.85rem 1rem;margin-bottom:.5rem;font-size:.85rem;line-height:1.55}ol li{margin-bottom:.4rem;font-size:.85rem}table{width:100%;border-collapse:collapse;font-size:.8rem}th{text-align:left;padding:.5rem .7rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.45rem .7rem;border-bottom:1px solid #eee}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>${p.nombre}</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">briza — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Versión: <strong>${p.version||'v1.0'}</strong></div><div>Fecha: <strong>${p.fecha?formatDate(p.fecha):hoy}</strong></div><div>Actividad: <strong>${p.actividad||'—'}</strong></div></div></div>
   <div class="sec"><div class="sec-t">Objetivo</div><p style="font-size:.86rem;line-height:1.6;margin:0">${p.objetivo||'No definido.'}</p></div>
   <div class="sec"><div class="sec-t">Alcance</div><p style="font-size:.86rem;line-height:1.6;margin:0">${p.alcance||'No definido.'}</p></div>
   <div class="sec"><div class="sec-t">EPP Requerido</div><div class="box" style="background:#f0fdf4;border-color:#22c55e">${p.epp||'No especificado.'}</div></div>
@@ -4956,7 +4956,7 @@ function imprimirPTS(id){
   <div class="sec"><div class="sec-t">Medidas de Control</div><div class="box">${p.medidas||'No especificadas.'}</div></div>
   ${(p.pasos||[]).length?`<div class="sec"><div class="sec-t">Paso a Paso</div><ol>${(p.pasos||[]).map(s=>`<li>${s.desc||''}</li>`).join('')}</ol></div>`:''}
   ${(p.firmas||[]).length?`<div class="sec"><div class="sec-t">Registro de Lecturas y Firmas</div><table><thead><tr><th>#</th><th>Trabajador</th><th>RUT</th><th>Cargo</th><th>Fecha</th></tr></thead><tbody>${(p.firmas||[]).map((f,i)=>`<tr style="background:${i%2?'#fff':'#f9fafc'}"><td>${i+1}</td><td>${f.nombre||'—'}</td><td>${f.rut||'—'}</td><td>${f.cargo||'—'}</td><td>${f.fecha?formatDate(f.fecha):'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
-  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
+  <div class="footer">Documento generado automáticamente por briza · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
   const win=window.open('','_blank','width=900,height=700');
   if(win){win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);}
 }
@@ -5462,7 +5462,7 @@ function refreshCapRegistro(){
   const tbody=document.getElementById('capTableBody');if(!tbody)return;
   if(!filtered.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted)">Sin capacitaciones registradas.</td></tr>`;return;}
   const catL={buceo:'Buceo',emergencias:'Emergencias',legal:'Legal/SST',epp:'EPP',otro:'Otro'};
-  const catC={buceo:'rgba(56,189,248,.12)',emergencias:'rgba(239,68,68,.12)',legal:'rgba(139,92,246,.12)',epp:'rgba(234,179,8,.12)',otro:'var(--bg-hover)'};
+  const catC={buceo:'rgba(56,189,248,.12)',emergencias:'rgba(239,68,68,.12)',legal:'rgba(37,99,235,.12)',epp:'rgba(234,179,8,.12)',otro:'var(--bg-hover)'};
   const catT={buceo:'var(--info)',emergencias:'var(--danger)',legal:'var(--accent-light)',epp:'var(--warning)',otro:'var(--text-muted)'};
   tbody.innerHTML=filtered.map(c=>`<tr><td><div style="font-weight:700;font-size:.84rem">${c.tema||'—'}</div>${c.desc?`<div style="font-size:.72rem;color:var(--text-muted)">${c.desc.slice(0,50)}</div>`:''}</td><td><span style="background:${catC[c.categoria]||'var(--bg-hover)'};color:${catT[c.categoria]||'var(--text-muted)'};padding:.2rem .52rem;border-radius:7px;font-size:.69rem;font-weight:700">${catL[c.categoria]||c.categoria}</span></td><td style="font-size:.82rem">${c.fecha?formatDate(c.fecha):'—'}</td><td style="font-size:.82rem">${c.relator||'—'}</td><td><span style="background:rgba(34,197,94,.12);color:var(--success);padding:.15rem .45rem;border-radius:6px;font-size:.72rem;font-weight:700">${(c.asistentes||[]).length} personas</span></td><td style="font-size:.82rem">${c.duracion||'—'} hrs</td><td><div class="table-actions"><button onclick="openCapRegistroModal('${c.id}')" title="Editar"><span class="material-icons-round">edit</span></button><button onclick="imprimirCapRegistro('${c.id}')" title="Imprimir lista"><span class="material-icons-round">print</span></button></div></td></tr>`).join('');
   const cargos=['Buzo Básico','Supervisor de Buceo','Patrón de Nave','Tripulante','Motorista','Cocinero','Operario'];
@@ -5525,13 +5525,13 @@ function deleteCapRegistro(){
 function imprimirCapRegistro(id){
   const c=loadCapRegistros().find(i=>i.id===id);if(!c)return;
   const hoy=new Date().toLocaleDateString('es-CL',{day:'2-digit',month:'long',year:'numeric'});
-  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Registro Capacitación</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.2rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #8b5cf6;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#8b5cf6,#6366f1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.info-box{background:#f5f3ff;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1.3rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;font-size:.83rem}.il{font-size:.68rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.iv{font-weight:700;margin-top:.1rem}table{width:100%;border-collapse:collapse;font-size:.82rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.sign-row td{height:50px;border-bottom:1px solid #ccc}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
-  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Capacitación</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">PrevRisk — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Folio: CAP-${c.id.slice(-6).toUpperCase()}</div><div>Fecha Impresión: ${hoy}</div></div></div>
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Registro Capacitación</title><style>body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:2rem;color:#1a1d27;background:#fff}h1{font-size:1.2rem;font-weight:800;margin:0}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #2563eb;padding-bottom:1rem;margin-bottom:1.5rem}.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem}.logo{display:flex;align-items:center;gap:.6rem}.meta{text-align:right;font-size:.75rem;color:#666}.info-box{background:#f5f3ff;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1.3rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;font-size:.83rem}.il{font-size:.68rem;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:.4px}.iv{font-weight:700;margin-top:.1rem}table{width:100%;border-collapse:collapse;font-size:.82rem}th{text-align:left;padding:.55rem .75rem;background:#f5f3ff;border-bottom:2px solid #ddd;font-size:.69rem;text-transform:uppercase}td{padding:.5rem .75rem;border-bottom:1px solid #eee}.sign-row td{height:50px;border-bottom:1px solid #ccc}.footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #ddd;text-align:center;font-size:.7rem;color:#888}@media print{body{padding:1rem}}</style></head><body>
+  <div class="header"><div class="logo"><div class="logo-icon">PR</div><div><h1>Registro de Capacitación</h1><div style="font-size:.75rem;color:#666;margin-top:.15rem">briza — Comercial Lafquen Ltda.</div></div></div><div class="meta"><div>Folio: CAP-${c.id.slice(-6).toUpperCase()}</div><div>Fecha Impresión: ${hoy}</div></div></div>
   <div class="info-box"><div><div class="il">Tema</div><div class="iv">${c.tema||'—'}</div></div><div><div class="il">Fecha</div><div class="iv">${c.fecha?formatDate(c.fecha):'—'}</div></div><div><div class="il">Duración</div><div class="iv">${c.duracion||0} horas</div></div><div><div class="il">Relator</div><div class="iv">${c.relator||'—'}</div></div><div><div class="il">Lugar</div><div class="iv">${c.lugar||'—'}</div></div><div><div class="il">N° Asistentes</div><div class="iv">${(c.asistentes||[]).length}</div></div></div>
   ${c.desc?`<p style="font-size:.84rem;margin-bottom:1.2rem;line-height:1.55">${c.desc}</p>`:''}
   <table><thead><tr><th>#</th><th>Nombre Completo</th><th>RUT</th><th>Cargo</th><th>Firma</th></tr></thead>
   <tbody class="sign-row">${(c.asistentes||[]).map((a,i)=>`<tr class="sign-row"><td style="font-weight:700;color:#999">${i+1}</td><td>${a.nombre||''}</td><td>${a.rut||''}</td><td>${a.cargo||''}</td><td style="min-width:120px">${a.firma||''}</td></tr>`).join('')}</tbody></table>
-  <div class="footer">Documento generado automáticamente por PrevRisk · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
+  <div class="footer">Documento generado automáticamente por briza · ${hoy} · Comercial Lafquen Ltda.</div></body></html>`;
   const win=window.open('','_blank','width=900,height=700');
   if(win){win.document.write(html);win.document.close();setTimeout(()=>win.print(),500);}
 }
@@ -5758,7 +5758,7 @@ function enviarEmailAlerta(cfg, items) {
 
   const message = `Estimado Bastian,
 
-PrevRisk — Comercial Lafquen Ltda. detectó los siguientes documentos y vencimientos próximos al día de hoy, ${hoy}:
+briza — Comercial Lafquen Ltda. detectó los siguientes documentos y vencimientos próximos al día de hoy, ${hoy}:
 
 ─────────────────────────────────────────────────
 ${filas}
@@ -5766,12 +5766,12 @@ ${filas}
 
 Total de alertas: ${items.length}
 
-Ingresa a PrevRisk para gestionar estos vencimientos.
+Ingresa a briza para gestionar estos vencimientos.
 
-Este mensaje fue generado automáticamente por PrevRisk.
+Este mensaje fue generado automáticamente por briza.
 Prevencionista: Bastian Ancapán Vera`;
 
-  const subject = `⚠️ PrevRisk — ${items.length} vencimiento${items.length !== 1 ? 's' : ''} próximo${items.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('es-CL')}`;
+  const subject = `⚠️ briza — ${items.length} vencimiento${items.length !== 1 ? 's' : ''} próximo${items.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('es-CL')}`;
 
   try {
     emailjs.init(cfg.publicKey);
@@ -5780,14 +5780,14 @@ Prevencionista: Bastian Ancapán Vera`;
       subject,
       message,
     }).then(() => {
-      console.log('[PrevRisk] Email de alertas enviado a', cfg.emailDest);
+      console.log('[briza] Email de alertas enviado a', cfg.emailDest);
       showToast(`Email enviado a ${cfg.emailDest} ✓`);
     }).catch(err => {
-      console.error('[PrevRisk] Error enviando email:', err);
+      console.error('[briza] Error enviando email:', err);
       showToast('Error al enviar email — revisa las credenciales', 'error');
     });
   } catch (e) {
-    console.error('[PrevRisk] EmailJS error:', e);
+    console.error('[briza] EmailJS error:', e);
   }
 }
 

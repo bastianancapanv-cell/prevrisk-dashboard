@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#8b5cf6">
+    <meta name="theme-color" content="#1e3a5f">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <title>PrevRisk — Panel de Prevención de Riesgos</title>
-    <meta name="description" content="Panel de gestión integral para el área de Prevención de Riesgos. Organiza tareas, documentos, capacitaciones e inspecciones en un solo lugar.">
+    <title>briza — Panel de Prevención de Riesgos</title>
+    <meta name="description" content="briza — Panel de gestión integral para el área de Prevención de Riesgos. Organiza tareas, documentos, capacitaciones e inspecciones en un solo lugar.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -36,15 +36,21 @@
 
     <!-- ===== LOADING SCREEN ===== -->
     <div id="loadingScreen" style="position:fixed;inset:0;z-index:10000;background:#09090b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .5s ease;">
-      <div style="width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,#8b5cf6,#6366f1);display:grid;place-items:center;color:#fff;font-size:1.9rem;box-shadow:0 8px 32px rgba(139,92,246,.45);">
-        <span class="material-icons-round">shield</span>
+      <div style="width:62px;height:62px;border-radius:16px;display:grid;place-items:center;box-shadow:0 8px 32px rgba(37,99,235,.45);">
+        <svg viewBox="0 0 32 32" width="52" height="52" fill="none">
+          <defs><linearGradient id="briza-load" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs>
+          <rect width="32" height="32" rx="8" fill="url(#briza-load)"/>
+          <path d="M6 22 Q11 15 16 18 Q21 22 26 15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M6 26 Q11 19 16 22 Q21 26 26 19" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="16" cy="10" r="3.5" fill="white" opacity="0.95"/>
+        </svg>
       </div>
       <div style="text-align:center;">
-        <div style="font-size:1.2rem;font-weight:900;color:#fafafa;letter-spacing:-.3px;">PrevRisk</div>
-        <div style="font-size:.75rem;color:#52525b;margin-top:.25rem;">Cargando sistema...</div>
+        <div style="font-size:1.25rem;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;">briza</div>
+        <div style="font-size:.72rem;color:#64748b;margin-top:.25rem;letter-spacing:1px;text-transform:uppercase;">Cargando sistema...</div>
       </div>
       <div style="width:180px;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;">
-        <div id="loadBar" style="height:100%;background:linear-gradient(90deg,#8b5cf6,#6366f1);border-radius:2px;animation:loadSlide 1.6s ease-in-out infinite;"></div>
+        <div id="loadBar" style="height:100%;background:linear-gradient(90deg,#1e3a5f,#2563eb);border-radius:2px;animation:loadSlide 1.6s ease-in-out infinite;"></div>
       </div>
     </div>
     <style>
@@ -54,12 +60,18 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
-                <div class="logo-icon">
-                    <span class="material-icons-round">shield</span>
+                <div class="logo-icon" style="background:none;box-shadow:none;width:36px;height:36px;padding:0;border-radius:0">
+                    <svg viewBox="0 0 32 32" width="36" height="36" fill="none">
+                      <defs><linearGradient id="briza-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs>
+                      <rect width="32" height="32" rx="8" fill="url(#briza-grad)"/>
+                      <path d="M6 22 Q11 15 16 18 Q21 22 26 15" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                      <path d="M6 26 Q11 19 16 22 Q21 26 26 19" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" stroke-linecap="round"/>
+                      <circle cx="16" cy="10" r="3.5" fill="white" opacity="0.95"/>
+                    </svg>
                 </div>
                 <div class="logo-text">
-                    <h1>PrevRisk</h1>
-                    <span>Panel de Gestión</span>
+                    <h1 style="font-weight:800;letter-spacing:-.5px;color:#f1f5f9">briza</h1>
+                    <span style="color:#64748b;letter-spacing:1px;text-transform:uppercase;font-size:.62rem;font-weight:600">Panel de Gestión</span>
                 </div>
             </div>
         </div>
@@ -1615,12 +1627,12 @@
     <div class="modal-overlay active" id="loginOverlay" style="z-index:9999;">
       <div class="modal" style="max-width:420px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,rgba(0,198,167,.13),rgba(59,130,246,.09));border-bottom:1px solid var(--border);padding:2.2rem 2rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;">
-          <div style="width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,#00c6a7,#00a6df);display:grid;place-items:center;color:#fff;font-size:1.8rem;box-shadow:0 8px 28px rgba(0,198,167,.5);">
-            <span class="material-icons-round">shield</span>
+          <div style="display:grid;place-items:center;margin-bottom:.25rem">
+            <svg viewBox="0 0 32 32" width="52" height="52" fill="none"><defs><linearGradient id="briza-login" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#1e3a5f"/><stop offset="100%" stop-color="#2563eb"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#briza-login)"/><path d="M6 22 Q11 15 16 18 Q21 22 26 15" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M6 26 Q11 19 16 22 Q21 26 26 19" stroke="rgba(255,255,255,0.35)" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="10" r="3.5" fill="white" opacity="0.95"/></svg>
           </div>
           <div style="text-align:center;">
-            <h2 style="font-size:1.45rem;font-weight:900;letter-spacing:-.5px;">PrevRisk</h2>
-            <p style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem;">Sistema de Gestión de Prevención de Riesgos</p>
+            <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.5px;color:#f1f5f9">briza</h2>
+            <p style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;letter-spacing:.8px;text-transform:uppercase">Panel de Prevención de Riesgos</p>
           </div>
         </div>
         <div style="padding:1.75rem 2rem 2rem;">
@@ -1724,7 +1736,7 @@
     <!-- ===== MODAL EPP ===== -->
     <div class="modal-overlay" id="eppModalOverlay">
       <div class="modal" id="eppModal">
-        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(30,58,95,.08));">
           <h3 id="eppModalTitle"><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent-light)">security</span>Certificación EPP</h3>
           <button class="btn-icon modal-close" id="eppModalClose"><span class="material-icons-round">close</span></button>
         </div>
@@ -2143,7 +2155,7 @@
     <!-- ===== MODAL EDITAR EMBARCACIÓN ===== -->
     <div class="modal-overlay" id="embEditModalOverlay">
       <div class="modal modal-wide" id="embEditModal">
-        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(30,58,95,.08));">
           <h3><span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">directions_boat</span>Editar Embarcación</h3>
           <button class="btn-icon" id="embEditClose"><span class="material-icons-round">close</span></button>
         </div>
@@ -2222,7 +2234,7 @@
     <!-- ===== MODAL FICHA TRABAJADOR EXAMEN ===== -->
     <div class="modal-overlay" id="fichaExamenOverlay">
       <div class="modal modal-wide" id="fichaExamenModal">
-        <div class="modal-header" style="background:linear-gradient(135deg,rgba(91,138,240,.12),rgba(16,217,160,.08));">
+        <div class="modal-header" style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(30,58,95,.08));">
           <h3 id="fichaExamenTitle">
             <span class="material-icons-round" style="vertical-align:middle;margin-right:.4rem;color:var(--accent)">person</span>
             Ficha Trabajador
